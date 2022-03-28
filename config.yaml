@@ -1,4 +1,4 @@
-baseurl: "/"
+baseurl: "https://sarckk.github.io"
 languageCode: "en-us"
 title: "Shin"
 theme: "hugo-xmin"
