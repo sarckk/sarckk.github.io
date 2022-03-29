@@ -16,11 +16,6 @@ menu:
     - name: Home
       url: ""
       weight: 1
-    - name: About
-      url: "about/"
-      weight: 2
-    - name: Subscribe
-      url: "index.xml"
 
 params:
   description: "A website built through Hugo and blogdown."

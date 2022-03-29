@@ -6,14 +6,9 @@ body {
 }
 
 /* header and footer areas */
+.terms { font-size: .9em; }
 .menu { padding: 0; }
 .menu li { display: inline-block; }
-.article-meta, .menu a {
-  text-decoration: none;
-  background: #eee;
-  padding: 5px;
-  border-radius: 5px;
-}
 .menu, .article-meta, footer { text-align: center; }
 .title { font-size: 1.1em; }
 footer a { text-decoration: none; }
@@ -22,11 +17,20 @@ hr {
   color: #ddd;
 }
 
+.article-meta {
+  margin: 2rem 0;
+}
+.article-meta h1 {
+  margin: 0;
+}
+h2.date {
+  margin: 0;
+  color: rgb(108, 108, 108);
+  font-size: 14px;
+}
+
 /* code */
 pre {
-  border: 1px solid #ddd;
-  box-shadow: 5px 5px 5px #eee;
-  padding: 1em;
   background: #f8f8f8;
   overflow-x: auto;
 }
