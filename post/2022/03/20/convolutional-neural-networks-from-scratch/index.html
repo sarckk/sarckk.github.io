@@ -1,0 +1,380 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Convolutional Neural Networks from Scratch | Shin</title><link rel=stylesheet href=/css/style.css><link rel=stylesheet href=/css/fonts.css><link rel=stylesheet href=//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/styles/base16/gruvbox-dark-medium.min.css><script src=//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js></script>
+<script>hljs.highlightAll()</script></head><body><a href=/ style=all:initial;cursor:pointer><h1>Bits&Brains</h1></a><hr><div class=article-meta><h1><span class=title>Convolutional Neural Networks from Scratch</span></h1><h2 class=date>2022/03/20</h2><p class=terms>Tags: <a href=/tags/ai>AI</a> <a href=/tags/computer-vision>Computer Vision</a> <a href=/tags/python>Python</a></p></div><main><p>In this blog post we are going to take a look at how to implement a simple CNN model from scratch in Python, using mostly just <code>numpy</code>.</p><p>In practice, we can use high-level libraries such as Keras or PyTorch to abstract away the underlying details of CNN when writing code. However, we find that the exercise of writing one from scratch is very helpful in gaining a deeper understanding of CNNs and how these frameworks work under the hood.</p><p>Let&rsquo;s get started!</p><h2 id=convolutions>Convolutions</h2><p>We won&rsquo;t have a CNN without some convolutional layers! Let&rsquo;s start by implementing a convolutional layer class. All layers that we are going to implement in this post will be defined by a simple interface: all of them will have a <code>forward</code> and <code>backward</code> method for the forward and backward pass respectively.</p><p>This will be easier to explain once we have some code to refer to. So here it is:</p><pre><code class=language-python>import numpy as np
+
+class Conv:
+  def __init__(self, in_channels, out_channels, filter_size, pad = 0, stride = 1, weight_scale = 1e-3):
+    self.pad = pad
+    self.stride = stride
+    # Weights initialized from 0-centered Gaussian with standard deviation
+    # equal to `weight_scale` (by default set to 1e-3) for stability
+    self.filters =  np.random.randn(out_channels, in_channels, 
+                                     filter_size, filter_size) * weight_scale
+    # biases initialized to zero
+    self.bias = np.zeros((out_channels, ))
+
+
+  def calc_output_dim(self, x):
+    _, H, W = x.shape
+    _, _, filter_height, filter_width = self.filters.shape
+
+    H_out = 1 + (H + 2 * self.pad - filter_height) // self.stride
+    W_out = 1 + (W + 2 * self.pad - filter_width) // self.stride
+
+    return H_out, W_out
+
+
+  def iterate_regions(self, x):
+    H_out, W_out = self.calc_output_dim(x)
+    F, C, filter_height, filter_width = self.filters.shape
+
+    for i in range(H_out):
+      for j in range(W_out):
+        x_region = x[:, i * self.stride : i * self.stride + filter_height, j * self.stride : j * self.stride + filter_width]
+        yield i, j, x_region
+
+
+  def forward(self, x):
+    &quot;&quot;&quot;
+    Inputs:
+    - x: An ndarray containing input data, of shape (C, H, W)
+    Returns:
+    - out: Result of convolution, of shape (F, H', W') 
+    where F is the number of out channels and 
+    H' = 1 + (H + 2 * pad - filter_height) / stride
+    W' = 1 + (W + 2 * pad - filter_width) / stride
+    &quot;&quot;&quot;
+
+    self.x = x  # save as cache
+
+    _, H, W = x.shape
+    F, _, _, _ = self.filters.shape
+
+    # to pad last two dimensions of the four dimensional tensor
+    x_pad = np.pad(x, self.pad, mode='constant')
+
+    H_out, W_out = self.calc_output_dim(x)
+    out = np.zeros((F, H_out, W_out))
+
+    for f in range(F):
+      # convolve F times to get F x filter_height x filter_width 
+      kernel = self.filters[f] # dimension is C x filter_height x filter_width    
+      for i, j, x_region in self.iterate_regions(x_pad):
+        out[f, i, j] = (x_region * kernel).sum()
+      
+      out[f] += self.bias[f] # makes use of broadcasting
+
+    return out
+
+
+  def backward(self, dout):
+    &quot;&quot;&quot;
+    Inputs:
+    - dout: An ndarray of the upstream derivatives, of shape (F, H', W')
+    Returns a tuple of:
+    - dx: Gradient w.r.t input x, of shape (C, H, W)
+    - dw: Gradient w.r.t. filters, of shape (F, C, filter_height, filter_width)
+    - db: Gradient w.r.t the biases, of shape (F, )
+    &quot;&quot;&quot;
+
+    _, H, W = self.x.shape # retrieve from cache
+    F, C, HH, WW = self.filters.shape
+    
+    x_pad = np.pad(self.x, self.pad, mode='constant')
+
+    dx = np.zeros_like(x_pad) 
+    dw = np.zeros_like(self.filters) 
+    db = np.zeros_like(self.bias)
+
+    for f in range(F): 
+      for i, j, x_region in self.iterate_regions(x_pad):
+        dw[f] += dout[f, i, j] * x_region
+
+        dx[:, i*self.stride:i*self.stride + HH, j*self.stride:j*self.stride + WW] += \
+              dout[f, i, j] * self.filters[f]
+
+      db[f] += dout[f].sum()
+
+    # trim off padding so that dimension of dx is the same as x
+    dx = dx[:, self.pad: self.pad + H, self.pad : self.pad + W]
+
+    return dx, dw, db
+</code></pre><h3 id=convolutional-layer-forward-pass>Convolutional layer: forward pass</h3><p>In the <code>forward</code> call, we pass in the input image <code>x</code>, which will be a numpy ndarray of dimensions <code>C x H x W</code> where <code>C</code> is the number of channels (3 for RGB) and <code>H</code> and <code>W</code> are the height and weight of the image respectively.</p><p>The first thing we do is to cache the input so that we have access to it during the backpropagation:</p><pre><code class=language-python> self.x = x  # save as cache
+</code></pre><p>Following that, we pad the image with the specified padding, using 0 as the value for the padded cells. To do this, we make use of numpy&rsquo;s <code>np.pad</code> method:</p><pre><code class=language-python>x_pad = np.pad(x, self.pad, mode='constant')
+</code></pre><p>Following this, we define <code>out</code>, which is the tensor / ndarray we will return from <code>forward</code> as the result of the convolution. This will be a three-dimensional tensor with dimensions <code>F x H_out x W_out</code>, where <code>F</code> is the number of filters we specified. We calculate <code>H_out</code> and <code>W_out</code> using a formula which we extract out to a separate helper function, <code>calc_output_dim()</code>.</p><pre><code class=language-python>H_out, W_out = self.calc_output_dim(x)
+out = np.zeros((F, H_out, W_out))
+</code></pre><p>Next comes the main logic for calculating the result of the convolutional operation:</p><pre><code class=language-python>for f in range(F):
+      # convolve F times to get F x filter_height x filter_width 
+      kernel = self.filters[f] # dimension is C x filter_height x filter_width    
+      for i, j, x_region in self.iterate_regions(x_pad):
+        out[f, i, j] = (x_region * kernel).sum()
+</code></pre><p>For each filter, we calculate the result of multiplying the filter (<code>filter</code> is a reserved keyword in Python, so we use the variable name <code>kernel</code>) with each region in the image of the same dimension as the filter (recall the CNN theory lecture), and set the output to be returned. Here we make use of the helper function <code>iterate_regions()</code>, which is a generator that <code>yield</code>s regions of the image <code>x_pad</code> which are of the same dimensions as the kernel (keeping the stride into account, as well).</p><h3 id=convolutional-layer-backward-pass>Convolutional layer: backward pass</h3><p>In the backward pass, we pass in <code>dout</code>, which are the upstream gradients which are being propagated from the next layer. In particular, <code>dout</code> is the partial derivative of our loss function (in the context of classifying digits in MNIST with CNNs, this would be the cross-entropy loss w/ softmax) with respect to the output of <code>forward</code>, which is a 3-dimensional tensor of dimensions <code>F x H_out x W_out</code>, as we previously calculated.</p><p>Given <code>dout</code> and the cached input, our job is to calculate <code>dx</code>, <code>dw</code>, <code>db</code>, which are the partial derivatives of the loss with respect to the input, filters (<code>w</code> stands for weights), and the biases respectively. The dimensions of each of these will be the same as the dimensions of the variables we are taking the derivative with respect to. In <code>backward()</code>, we return these derivatives as a tuple. <code>dx</code> is used as the <code>dout</code> for the previous layer (recall how backpropagation works!), while <code>dw</code> and <code>db</code> will be used to update the filter weights and biases respectively via gradient descent. I&rsquo;ve omitted the nitty-gritty details of how to do this here in order to keep it (relatively) concise, but the implementation should be relatively straightforward once you have these gradients.</p><p>Now let&rsquo;s look at the backpropagation in greater detail:</p><h4 id=theory>Theory</h4><p>Let&rsquo;s see how we can calculate <code>dw</code> first. To recap, <code>dw</code> is the gradient of the loss w.r.t the filter weights $w$ : $\frac{\partial L}{\partial w}$.</p><p>Let the output of conv (variable <code>out</code> from the forward pass) be $o$. Using the <strong>chain rule</strong>, we get: $\frac{\partial L}{\partial w} = \frac{\partial L}{\partial o} * \frac{\partial o}{\partial w}$. We already know $\frac{\partial L}{\partial o}$ — this is the upstream gradient <code>dout</code>. Now we only need to calculate $\frac{\partial o}{\partial w}$, which is the gradient of the output w.r.t to the filter weights. Let&rsquo;s think about how to calculate this.</p><p>Imagine we have a <code>3 x 3</code> image $x$ and a <code>2 x 2</code> kernel filled with zeros. The result of the convolution operation is a <code>2 x 2</code> output also filled with zeros (rightside of the arrow). We assume no padding and a stride of 1:</p><img src=https://i.imgur.com/zAVGF6p.png width=700><p>Now let&rsquo;s imagine what would happen if we <em>nudge</em> the value of the top left cell of the filter, such that it becomes a 1. How would the output change? After all, this is essentially what $\frac{\partial o}{\partial w}$ is telling us. Let&rsquo;s look at the updated diagram:</p><img src=https://i.imgur.com/oxfqrj0.png width=700><p>Can you see the pattern? We can see that the output changed by exactly the image pixel values that the changed filter weight is multiplied with during the convolution operation. In other words, the derivative of a single pixel of our output $o$ with respect to a filter weight is just the corresponding pixel value in the image (that this filter weight is multiplied by).</p><p>More formally, if we let $o$ to be $m$ x $n$ and the filter to be $w$ x $h$, then the $i^{th}$ row and $j^{th}$ column of the output $o$ (which we denote by $o[i,j]$) can be expressed as:</p><p>\begin{equation}
+o[i,j] = \sum_{r=0}^{w} \sum_{c=0}^{h} x[i + r, j + c] * filter[r,c]
+\end{equation}</p><p>and as we&rsquo;ve just seen, the partial derivative of this term w.r.t a specific filter weight is given by:</p><p>\begin{equation}
+\frac{\partial o[i,j]}{\partial filter[r,c]} = x[i + r, j + c]
+\end{equation}</p><p>We now have everything we need to obtain the gradient of the loss with respect to the filter weight indexed by $[r,c]$, $\frac{\partial L}{\partial filter[r,c]}$, using the chain rule:</p><p>\begin{equation}
+\frac{\partial L}{\partial filter[r,c]} = \sum_{i=0}^{m} \sum_{j=0}^{n} \frac{\partial L}{\partial o[i,j]} * \frac{\partial o[i,j]}{\partial filter[r,c]} = \sum_{i=0}^{m} \sum_{j=0}^{n} \frac{\partial L}{\partial o[i,j]} * x[i + r, j + c]
+\end{equation}</p><p>We can compute the derivative of the loss w.r.t <code>x</code> similarly, where instead of the pixel value of the image it&rsquo;s the corresponding filter weight. I&rsquo;ll leave this as an exericse for you!</p><p>Lastly, let&rsquo;s quickly go through how we compute <code>db</code>, the derivative of the loss w.r.t the biases. In my example, the biases are passed in as an numpy array of shape <code>(F, )</code> where <code>F</code> is the number of filters. Therefore, <code>db</code> will have the same dimension.</p><p>Given a single filter, we have a scalar value <code>b</code> being added to each &lsquo;pixel&rsquo; of the output. Because this is just simply addition, the derivative of a pixel of the output w.r.t to the bias term <code>b</code> ( $\frac{\partial o[r,c]}{\partial b}$) is 1. This means that the derivative for the bias term for each filter is simply the sum of <code>dout</code> for that filter.</p><p>\begin{equation}
+\frac{\partial L}{\partial b} = \sum_{i=0}^{m} \sum_{j=0}^{n} \frac{\partial L}{\partial o[i,j]} * \frac{\partial o[i,j]}{\partial b} = \sum_{i=0}^{m} \sum_{j=0}^{n} \frac{\partial L}{\partial o[i,j]}
+\end{equation}</p><h4 id=implementation>Implementation</h4><p>Now that we&rsquo;ve covered the theory of how backpropagation works for convolutions, let&rsquo;s see how we translate this over to code:</p><p>After extracting the dimensions we need and padding the input, we initialize <code>dx</code>, <code>dw</code> and <code>db</code> with zeros:</p><pre><code class=language-python>dx = torch.zeros_like(x_pad) 
+dw = torch.zeros_like(self.filters) 
+db = torch.zeros_like(self.bias)
+</code></pre><p>For each filter, we iterate over each image region and accumulate the loss gradients for <code>dw</code> and <code>dx</code>. As we just saw, the gradient for the bias term for a particular filter is just the sum of <code>dout</code> for that filter. Note that for <code>dx</code>, we need to trim off the padding such that the dimensions of <code>dx</code> is the same as the original input we passsed into <code>forward()</code>.</p><pre><code class=language-python>for f in range(F): 
+  for i, j, x_region in self.iterate_regions(x_pad):
+    dw[f] += dout[f, i, j] * x_region
+
+    dx[:, i*self.stride:i*self.stride + HH, j*self.stride:j*self.stride + WW] += \
+          dout[f, i, j] * self.filters[f]
+
+  db[f] += dout[f].sum()
+
+# trim off padding so that dimension of dx is the same as x
+dx = dx[:, self.pad: self.pad + H, self.pad : self.pad + W]
+</code></pre><p>That&rsquo;s all the code we need for the convolution!</p><h2 id=pooling-layers--max-pool>Pooling layers : max pool</h2><p>Besides conv, another key component in CNNs is the pooling layers. Here I will show you how to implement a max pooling layer from scratch, again using nothing but <code>numpy</code>. Here is the code:</p><pre><code class=language-python>class MaxPool2x2:
+  def forward(self, x):
+    &quot;&quot;&quot;
+    Inputs:
+    - x: An ndarray containing input data, of shape (C, H, W)
+    Returns:
+    - out: Result of max pooling operation, of shape (C, H', W') where
+    H' = 1 + (H - pooling height) // stride
+    W' = 1 + (H - pooling width) // stride
+    &quot;&quot;&quot;
+    self.x = x # cache
+    C, H, W = x.shape
+    out = np.zeros((C, H // 2, W // 2))
+
+    for c in range(C):
+      for i in range(H // 2):
+        for j in range(W // 2):
+          out[c, i, j] = np.max(x[c, i*2:i*2 + 2, j*2:j*2 + 2])
+
+    return out
+
+  def backward(self, dout):
+    &quot;&quot;&quot;
+    Inputs:
+    - dout: Upstream gradients, of shape (C, H', W')
+    Returns:
+    - dx: Gradient w.r.t input x
+    &quot;&quot;&quot;
+    C, H, W = self.x.shape
+
+    dx = np.zeros_like(self.x) # C x H x W
+
+    for c in range(C):
+      for i in range(H // 2):
+        for j in range(W // 2):
+          window = self.x[c, i*2:i*2 + 2, j*2:j*2 + 2]
+          max_idx = np.argmax(window)
+          # window.shape is (2, 2)
+          max_r = max_idx // window.shape[1]
+          max_c = max_idx % window.shape[1]
+          dx[c, i*2:i*2+2, j*2:j*2+2][max_r, max_c] = dout[c, i, j]
+
+    return dx
+</code></pre><h3 id=max-pooling-layer-forward-pass>Max pooling layer: forward pass</h3><p>During the forward pass, we pass in <code>x</code>, which really is $o$ from the previous convolutional layer. <code>x</code> will be a three-dimensional tensor of shape <code>C x H x W</code>.</p><p>Here, I decided to simplify the code by specifying that this is a <code>2x2</code> max pooling layer. Handling different pool widths and heights isn&rsquo;t too difficult, and I&rsquo;ll leave this as an exercise for you.</p><p>The forward pass code is simple. We simply iterate through each image region similarly to convolutional layers and take the max element in each region. The difference with the convolutional layer is that the image regions are non-overlapping. We also remember to cache the input <code>x</code> so that we can refer to it in the backpropagation phase.</p><h3 id=max-pooling-layer-backward-pass>Max pooling layer: backward pass</h3><p>During the backward pass, we receive <code>dout</code>, similar to convolutional layers. <code>dout</code> will represent the derivative of the loss with respect to the output of the max pooling layer and thus will be of shape <code>C x H x W</code>, where really <code>H</code> here is the original H divided by 3 (as a result of forward pass).</p><p>Remember that max pooling layers have no learnable weights! Our aim with backpropagation here is to simply compute <code>dx</code>, so that we can pass it as <code>dout</code> for the previous layer (most likely a ReLU layer) so that gradients propagate through our entire model and weights are updated.</p><p>Keeping this in mind, let&rsquo;s think about how to compute $\frac{\partial o}{\partial x}$, where again we denote the result of max pooling as $o$ (remember that if we have $\frac{\partial o}{\partial x}$, we can compute $\frac{\partial L}{\partial x}$ because we already have $\frac{\partial L}{\partial o}$). During the forward pass, we take the max value in every <code>2 x 2</code> region. Therefore, intuitively, every other value in the region that is not the max will not change the output $o$. These values therefore have 0 gradient. For the max value, we simply assign the corresponding gradient value. Below is an illustration (<a href=https://medium.com/@eternalzer0dayx/demystifying-convolutional-neural-networks-ca17bdc75559 target=_blank rel="noreferrer noopener">source</a>
+):</p><img src=https://miro.medium.com/max/1098/0*jDAl5F-y3qzvcObd.png width=500><p>The code we have written for backprop is simply translating this idea to code:</p><pre><code class=language-python>for c in range(C):
+      for i in range(H // 2):
+        for j in range(W // 2):
+          window = x[c, i*2:i*2 + 2, j*2:j*2 + 2]
+          max_idx = np.argmax(window)
+          max_r = max_idx // window.shape[1]
+          max_c = max_idx % window.shape[1]
+          dx[c, i*2:i*2+2, j*2:j*2+2][max_r, max_c] += dout[c, i, j]
+</code></pre><p>One thing to keep in mind is that <code>np.argmax()</code> returns an index instead of (row, col) so we have to convert it appropriately, then index into it to incrementally build up <code>dx</code>.</p><h2 id=softmax>Softmax</h2><p>To complete our implementation of a CNN, we need a fully connected layer that flattens the tensor we get from the last conv layer (most likely with non-linearity and pooling applied) into a $k$-dimensional vector where $k$ is the number of classes. For our MNIST classifier, we have digits, so $k = 10$.</p><p>We also apply a <strong>softmax</strong> activation to the predictions to convert them into probabilities that add up to 1. To convert these probabilities into a loss we can use for training, we use <strong>cross-entropy loss</strong>, given by the following formula:</p><p>\begin{equation}
+L=−log(p_c)
+\end{equation}</p><p>where $p_c$ is the probability of the correct class.</p><p>As this post is about CNNs, I won&rsquo;t get into too much detail for softmax / cross-entropy loss. Those who are interested can check out this <a href=https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/ target=_blank rel="noreferrer noopener">excellent blog post</a>
+from Eli Bendersky.</p><p>Here are the implementations for a fully-connected linear layer as well as a function computing loss and derivatives for softmax loss.</p><pre><code class=language-python>class Linear:
+  def __init__(self, in_features, out_features, weight_scale = 1e-3):
+    # Initialise weight matrix of shape (in_features, out_features)
+    self.weights = np.random.randn(in_features, out_features) * weight_scale
+    self.bias = np.zeros(out_features)
+
+  def forward(self, x):
+    &quot;&quot;&quot;
+    Inputs:
+    - x: An ndarray containing input data, of shape (d_1, ..., d_k) such that 
+      D = d_1 * ... * d_k is equal to `in_features`
+    Returns:
+    - out: output, of shape (1, out_features)
+    &quot;&quot;&quot;
+    self.x_before_flatten = x # cache
+    reshaped_x = x.flatten()[np.newaxis, :] # shape (1, D)
+    self.x_after_flatten = reshaped_x # cache
+
+    # @ is the matrix multiplication operator in Python
+    # reshaped_x's shape: (1 , D)
+    # self.weight's shape: (D , M) where M is out_features
+    # result of reshaped_x @ self.weights is of shape (1, M), so (1,10) for MNIST
+    out = reshaped_x @ self.weights + self.bias 
+    return out
+  
+  def backward(self, dout):
+    &quot;&quot;&quot;
+    Inputs:
+    - dout: An ndarray of the upstream derivatives, of shape (1, M) where M = out_features
+    Returns a tuple of:
+    - dx: Gradient w.r.t input x, of shape (d_1, ..., d_k)
+    - dw: Gradient w.r.t. weights w, of shape (D, M)
+    - db: Gradient w.r.t the biases, of shape (M, )
+    &quot;&quot;&quot;
+    dx = (dout @ self.weights.T).reshape(*self.x_before_flatten.shape)
+    dw = self.x_after_flatten.T @ dout # (D x 1) * (1 x M)
+    db = dout.squeeze() # turns (1, M) to (M, )
+    return dx, dw, db
+
+def softmax_loss(scores, y):
+  &quot;&quot;&quot;
+  Inputs:
+  - scores: ndarray of scores, of shape (N, C) where C is the no. of classes
+  - y: ndarray of class labels, of shape (N,) where y[i] is the label for x[i] 
+  Returns a tuple of:
+  - loss: Scalar value representing the softmax loss
+  - dscores: Gradient of loss w.r.t scores, of shape (N, C)
+  &quot;&quot;&quot;
+  N = scores.shape[0]
+
+  # for each sample, we shift the scores by the maximum value for numerical stability
+  # if you are confused, read the bolded section titled &quot;Practical issues: numerical stability&quot;
+  # from this page: https://cs231n.github.io/linear-classify/#softmax-classifier
+  shifted_scores = scores - np.amax(scores, axis=1, keepdims=True)
+
+  exp = np.exp(shifted_scores) # shape is (N, C)
+  probs = exp / exp.sum(axis=1, keepdims=True) # also (N, C)
+  cross_entropy = -1 * np.log( probs[np.arange(N), y] ) # shape is now (N,) -&gt; scalar value per sample
+  loss = cross_entropy.mean() 
+
+  # calculate derivatives. See https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/
+  dscores = probs.copy()
+  dscores[np.arange(N), y] -= 1
+  dscores /= N
+
+  return loss, dscores
+</code></pre><h3 id=putting-it-together>Putting it together</h3><p>Once we have the core components, we can put together the classes we&rsquo;ve written so far to create a CNN model:</p><pre><code class=language-python>conv = Conv(1, 8, 3)  # 28x28x1 -&gt; 26x26x8
+pool = MaxPool2x2() # 26x26x8 -&gt; 13x13x8
+linear = Linear(13 * 13 * 8, 10)  # 13x13x8 -&gt; 10
+
+def forward(image, y):
+  '''
+    Completes a forward pass of the CNN
+    - image is a numpy ndarray of shape (1 x 28 x 28) representing the greyscale image
+    - y is the corresponding digit
+  '''
+  # transform the image from [0, 255] to [0, 1]
+  out = conv.forward((image / 255))
+  out = pool.forward(out)
+  scores = linear.forward(out)
+
+  loss, dout = softmax_loss(scores, y)
+
+  return scores, loss, dout   
+
+def loss(image, label):
+  '''
+    Computes loss + completes a backward pass of the whole model
+  '''
+  grads = {}
+  # forward pass
+  scores, loss, dout = forward(image, label)
+
+  # Backprop
+  dpool, grads['W_linear'], grads['b_linear'] = linear.backward(dout)
+  dconv = pool.backward(dpool)
+  dx, grads['W_conv'], grads['b_conv'] = conv.backward(dconv)
+
+  return loss, grads
+
+
+# Challenge yourself: can you try to train the model?
+</code></pre><p>I&rsquo;ve omitted the training part because I wanted to focus on what each component is doing -— can you come up with the code to train the CNN model below on the MNIST dataset? Challenge yourself!</p><h2 id=cnn-in-keras>CNN in Keras</h2><p>So far we&rsquo;ve walked you through how to implement a CNN from scratch in Python. Fortunately, we practically never have to write a CNN from scratch nowadays, thanks to high-level libraries like Keras that help abstract all the underlying complexity away from us. To finish off this post, let&rsquo;s use Keras to implement the <strong>same</strong> CNN that we&rsquo;ve implemented above. I adapted this example from the <a href=https://keras.io/examples/vision/mnist_convnet/ target=_blank rel="noreferrer noopener">official Keras MNIST CNN example</a>
+.</p><pre><code class=language-python>from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.utils import to_categorical
+
+# split data
+(x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
+
+# scale images
+x_train = x_train.astype(&quot;float32&quot;) / 255
+x_test = x_test.astype(&quot;float32&quot;) / 255
+
+# Make sure images have shape (28, 28, 1)
+x_train = x_train[:,:,:, np.newaxis]
+x_test = x_test[:,:,:, np.newaxis]
+
+print(&quot;x_train shape:&quot;, x_train.shape)
+print(x_train.shape[0], &quot;train samples&quot;)
+print(x_test.shape[0], &quot;test samples&quot;)
+</code></pre><pre><code class=language-bash>Downloading data from https://storage.googleapis.com/tensorflow/tf-keras-datasets/mnist.npz
+11493376/11490434 [==============================] - 0s 0us/step
+11501568/11490434 [==============================] - 0s 0us/step
+x_train shape: (60000, 28, 28, 1)
+60000 train samples
+10000 test samples
+</code></pre><p>A few things worth pointing out in the code above:</p><p>First, once we load the MNIST dataset, we scale the images so that each pixel is in the [0,1] range instead of [0,255]. This makes it easier for us to train the CNN.</p><p>Next, we add a fourth dimension to the <code>x_train</code> and <code>x_test</code> tensors, which were initially of size <code>N x 28 x 28</code>, where <code>N</code> is the number of images. The last dimension we add represents the number of channels each image has, which is 1 because in MNIST we are working with greyscale images. For RGB, you would set this to 3. Also note that we add the number of channels as the last dimension in the Keras example. This is the standard adopted by Keras and Tensorflow. In our <code>numpy</code> implementation above, we adopted the convention used in <code>PyTorch</code>, the other major framework for machine learning, where the number of channels goes before the width and height of the image (i.e. a single image would be represented by a tensor of shape <code>1 x 28 x 28</code> instead of <code>28 x 28 x 1</code>).</p><p>Now our images are ready for training! Now let&rsquo;s turn out attention to our labels.</p><p>By default, <code>y_train</code> and <code>y_test</code> are arrays that contain single integers representing the digit that each image represents. Keras, however, expects each target label to be a <strong>10-dimensional</strong> vector. Therefore, we use <code>to_categorical()</code> from <code>keras.utils</code> to obtain an array of one-hot encoded vector. That is to say, if our target is 5, then after calling <code>to_categorical()</code>, we would get the zero-indexed array <code>[0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]</code>.</p><p>Here&rsquo;s the code, with some helpful outputs to see what&rsquo;s going on:</p><pre><code class=language-python># one-hot encoding label vectors
+print(&quot;y_train[0] before to_categorical: &quot;, y_train[0])
+
+y_train = to_categorical(y_train, 10)
+y_test = to_categorical(y_test, 10)
+
+print(&quot;y_train[0] after to_categorical: &quot;, y_train[0])
+
+print(&quot;y_train shape:&quot;, y_train.shape)
+</code></pre><pre><code class=language-console>y_train[0] before to_categorical:  5
+y_train[0] after to_categorical:  [0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]
+y_train shape: (60000, 10)
+</code></pre><p>Once we&rsquo;ve gotten our data ready for training, we now move onto actually specifying the model that we&rsquo;ll be using. Again, this is almost the exact same model that we&rsquo;ve implemented from scratch moments ago (the only difference being the presence of ReLU activation following each <code>Conv2D</code>):</p><pre><code class=language-python>model = keras.Sequential(
+    [
+        keras.Input(shape=(28,28,1)),
+        layers.Conv2D(filters=8, kernel_size=(3, 3), activation=&quot;relu&quot;),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Flatten(),
+        layers.Dense(10, activation=&quot;softmax&quot;),
+    ]
+)
+
+model.summary()
+</code></pre><pre><code class=language-console>Model: &quot;sequential&quot;
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ conv2d (Conv2D)             (None, 26, 26, 8)         80        
+                                                                 
+ max_pooling2d (MaxPooling2D  (None, 13, 13, 8)        0         
+ )                                                               
+                                                                 
+ flatten (Flatten)           (None, 1352)              0         
+                                                                 
+ dense (Dense)               (None, 10)                13530     
+                                                                 
+=================================================================
+Total params: 13,610
+Trainable params: 13,610
+Non-trainable params: 0
+_________________________________________________________________
+</code></pre><p>We also use a batch size of 1, which means we do gradient descent using gradients accumulated from just 1 image. We also do this for only 1 epoch. These settings are less than ideal, but to keep the Keras example consistent with our CNN implementation, we stick with it to see what kind of accuracy we can get. The <a href=https://keras.io/examples/vision/mnist_convnet/ target=_blank rel="noreferrer noopener">official Keras MNIST CNN example</a>
+, for example, uses a batch size of <code>128</code> for 15 epochs with a deeper CNN model and easily achieves ~99% test accuracy on MNIST. Not bad!</p><p>We use the Adam optimizer with the <code>categorical_crossentropy</code> loss that we&rsquo;ve discussed previously, since we have 10 target classes (which is > 2). Keras also allows us to keep track of various metrics during the course of training, and here we specify that we want Keras to report the accuracy.</p><p>Let&rsquo;s compile the model and train it!</p><pre><code class=language-python>batch_size = 1
+epochs = 1
+
+model.compile(loss=&quot;categorical_crossentropy&quot;, optimizer=&quot;adam&quot;, metrics=[&quot;accuracy&quot;])
+
+model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, validation_split=0.1)
+
+score = model.evaluate(x_test, y_test, verbose=0)
+print(&quot;Test loss:&quot;, score[0])
+print(&quot;Test accuracy:&quot;, score[1])
+</code></pre><pre><code class=language-console>54000/54000 [==============================] - 266s 4ms/step - loss: 0.1660 - accuracy: 0.9506 - val_loss: 0.0787 - val_accuracy: 0.9792
+&lt;keras.callbacks.History at 0x7fa9d01f72d0&gt;
+
+Test loss: 0.08045849204063416
+Test accuracy: 0.9753000140190125
+</code></pre><p>After just 1 epoch of training, we obtain a test accuracy of ~97.5% on the MNIST dataset, which is pretty good.</p><h2 id=conclusion>Conclusion</h2><p>That&rsquo;s it! To recap, I walked you through how CNNs can be implemented from scratch in Python using just <code>numpy</code>, and we&rsquo;ve seen how we can specify and train the same CNN model using <strong>Keras</strong> to reach a ~97.5% test accuracy on the MNIST dataset. Hopefully, the next time you use Keras or PyTorch or Tensorflow or any other similar libraries, remember that all they&rsquo;re doing at a high level is abstracting away the theory and code covered in this post (except they&rsquo;re vectorized / optimised for the GPU and thus often significantly faster).</p><h2 id=references--helpful-resources>References / Helpful Resources</h2><ul><li><a href=https://johnwlambert.github.io/conv-backprop/ target=_blank rel="noreferrer noopener">https://johnwlambert.github.io/conv-backprop/</a></li><li><a href="https://www.youtube.com/watch?v=Lakz2MoHy6o&ab_channel=TheIndependentCode" target=_blank rel="noreferrer noopener">https://www.youtube.com/watch?v=Lakz2MoHy6o&ab_channel=TheIndependentCode</a></li><li><a href=https://victorzhou.com/blog/intro-to-cnns-part-2/ target=_blank rel="noreferrer noopener">https://victorzhou.com/blog/intro-to-cnns-part-2/</a></li><li><a href=https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/ target=_blank rel="noreferrer noopener">https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/</a></li><li><a href=https://cs231n.github.io/linear-classify/#softmax-classifier target=_blank rel="noreferrer noopener">https://cs231n.github.io/linear-classify/#softmax-classifier</a></li><li><a href=https://web.eecs.umich.edu/~justincj/teaching/eecs498/FA2020/ target=_blank rel="noreferrer noopener">https://web.eecs.umich.edu/~justincj/teaching/eecs498/FA2020/</a></li></ul></main><footer><script type=text/x-mathjax-config>
+    MathJax.Hub.Config({
+      tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true
+      }
+    });
+</script><script defer src=//yihui.org/js/math-code.js></script>
+<script defer src="//mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+<script defer src=//yihui.org/js/center-img.js></script><hr><a href=https://github.com/sarckk target=_blank rel="noreferrer noopener">Github</a></footer></body></html>
