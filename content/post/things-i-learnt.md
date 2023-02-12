@@ -5,28 +5,23 @@ categories:
   - Reflections
 ---
 
-It's recently been 6 months since I started my first full-time job as a software engineer after graduating from university last year. A lot has changed in my life, and I thought I'd write about the things I've learned about myself, career, and life in the past half a year. I don't claim most of these to be original thoughts: many are an amalgamation of things I've read/heard about but have only recently begun to fully appreciate. It's also a list of things that I believe to be generally true at the time of me writing this, but I suspect some of these will need to be updated in the future as I experience more things. I try to incorporate these learnings into my life, but as with most things, it's a process! That said, I found the practice of compiling the list of things I've learned to be incredibly helpful in clarifying my own beliefs and putting my experience into perspective and recommend that others try it out too. With that, here's some things I've learned recently:
+It's recently been 6 months since I started my first full-time job as a software engineer after graduating from university last year. A lot has changed in my life, and I thought I'd write about the things I've learned about myself, career, and life in the past half a year. I don't claim most of these to be original thoughts: many are an amalgamation of things I've read/heard about but have only recently begun to fully appreciate. It's also a list of things that I believe to be generally true at the time of me writing this, but I suspect some of these will not apply to all situations or people (see learning #8) or will need to be updated with more nuance in the future. Notwithstanding, I think these are generally good statements to live by. I myself try to incorporate these learnings into my life, but as with most things, it's a process! That said, I found the practice of compiling the list of things I've learned to be incredibly helpful in clarifying my own beliefs and putting my experience into perspective and recommend that others try it out too. With that, here's some things I've learned recently:
 
-1. Keep learning things. If you're learning in your job, that's great. If you're not, do everything you can to learn outside of work.
-2. Always be in the process of *becoming* something, not because of expected future reward, but because you'll fall into a meaning crisis otherwise.
-3. Sometimes you need to fall into mud to really know how to get out of it, so don't beat yourself up for having fallen into one.
-4. Winners today might be losers tomorrow, and vice-versa. Be aware of the transcience of things. 
-5. Prepare for the worst while things are good.
-6. Work with the constraints you have. Build a narrative around your constraints and turn them into a competitive advantage.
-7. The antidote to emptiness is to fill your life with experiences until there's no more space left. Spend every day exploring things you're interested in, or even somewhat vaguely interested in, to the full. Really dig deep into learning *how* things work and *why* things work that way. Keep digging until you convince yourself that there's not much more to be done. 
-8. Your intention very much dictates what you see. 
-9. Be wary about any worldview that paints a binary picture of the world. Few things are completely black or white; most truths lie somewhere in the nuanced shades of gray.
-10. If you don't know what you want to do right now, a good place to start is to try to improve the little things that are bothering you.
-11. Don't surround yourself with people that bore you.
-12. Doing something, even if it doesn't immediately appeal to you, is better than doing nothing. If at the end of it you realize you don't like doing it, that's a valuable lesson learned. 
-13. [Take a long-term view of things](https://norvig.com/21-days.html)
-14. The only real way to figure out what you like is by trying out a lot of things. Expect some suffering.
-15. Cut through the noise and look at your current situation with clear judgement. In which areas are you doing well and in which are you not? 
-16. When you're young, say *yes* more often than *no* if you're unsure. Some of the best opportunities and people I've met have come from saying *yes*.
-17. Exercise.
-18. Sometimes you need to eat a shit sandwich.
-19. Try to live every day with a sense of awe. Take long walks and try to notice the little things.
-20. Prioritize ruthlessly.
-21. Don't beat yourself up for failing to do any of the above. 
-22. On a related note,[stop eating so many frogs](https://experimentalhistory.substack.com/p/excuse-me-but-why-are-you-eating).
-23. Don't take things too seriously. Most things aren't that important, and only a few things are.
+1. The process of *becoming* something gives your life a whole lot of meaning. Much of life is becoming a better version of yourself.
+2. Everything is transcient. 
+3. The best people learn to work with the constraints they have and turn them into an advantage.
+4. Sometimes you really do need to eat a shit sandwich. Resigning yourself to this makes eating it easier.
+5. One antidote to emptiness/meaninglessness -- other than spirituality -- that I suspect would work for a lot of people is to explore something to the fullest until you get to the bottom of *how* it works and *why* it works that way.
+6. If you don't know what you want to do right now, a good place to start is to try to improve the little things that are bothering you.
+7. Your intention determines what you see. 
+8. Few things are completely black or white; most truths lie somewhere in the nuanced shades of gray. You should generally be wary of any worldview that presents a binary picture of the world.
+9. Doing something, even if it doesn't immediately appeal to you, is better than doing nothing. If at the end of it you realize you don't like doing it, that's a valuable lesson learned. 
+10. It's important to [take a long-term view of things](https://norvig.com/21-days.html). Life is pretty long.
+11. Life is also pretty short. Prioritize ruthlessly.
+12. The only reliable way to figure out what you like is by trying out a lot of things. 
+13. If life feels like [eating one frog after another](https://experimentalhistory.substack.com/p/excuse-me-but-why-are-you-eating), you're probably doing something wrong.
+14. Saying "no" can be important, but when you're young, it's often a good strategy to lean towards a "yes" *if you're unsure*. This is because most people are in the [divergent](https://thesephist.com/posts/focus/) phases of their lives when they're young.
+15. Exercise!
+16. The amount of human ingenuity that went into the things around you -- including the device you're reading this post on -- is really quite staggering.
+17. Sometimes you need to fall into mud to really know how to get out of it, so don't beat yourself up for having fallen into one.
+18. Most things in life aren't *that* important and only a few are.
