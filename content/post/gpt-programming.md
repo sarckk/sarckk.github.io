@@ -36,7 +36,7 @@ In the end, it came up with [this](https://github.com/sarckk/gpt_experiments/tre
 ## A subtle Javascript bug 
 Never mind the API issues, I loaded up the updated version of the extension locally to see if other changes (like the interactions around the buttons, spinning animation, and error messages) were working correctly. Not quite --
 
-![](https://sarckk.github.io/media/save_for_later.mp4)
+<video src="https://sarckk.github.io/media/buggy_mvp.mp4" controls="controls" ></video>
 
 I noticed that clicking on any button was causing the spinning icon and the error message to only appear on the last item in the list. It turned out that there was a subtle Javascript bug in the [`main.js`](https://github.com/sarckk/gpt_experiments/blob/53ccd300a92a309397f63790d3f2a708a7065ba4/main.js) that the model had given us. Can you spot it?
 
@@ -128,25 +128,25 @@ fetch('https://api.pinecone.io/v1/vector-indexes/<INDEX_NAME>/vectors', options)
 Even if we accept that the event listener function for `button` closes over `error` as well, the **subsequent claim that it will "use the last value of `spinner` and `error` that were defined in the loop" is just plainly false**, because `spinner` is defined with the `const` keyword, meaning it is block-scoped and local to the loop, as I demonstrate in the following small example I put together:
 
 <iframe src="https://codesandbox.io/embed/recursing-grass-7184cx?fontsize=14&hidenavigation=1&theme=dark"
-     style="width:100%; height:500px; border:0; border-radius: 4px; overflow:hidden;"
-     title="recursing-grass-7184cx"
-     allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
-     sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
-   ></iframe>
-*As you can see, clicking the button for spinner X only changes the text content for spinner X, and leaves the other spinners untouched. This is because `spinner` is declared with `const` and is block-scoped. If we change it to `var`, we get the same issue as we were seeing in our Chrome extension.*
+  style="width:100%; height:500px; border:0; border-radius: 4px; overflow:hidden;"
+  title="recursing-grass-7184cx"
+  allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
+  sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+></iframe>
 
+As you can see, clicking the button for spinner X only changes the text content for spinner X, and leaves the other spinners untouched. This is because `spinner` is declared with `const` and is block-scoped. Try changing this to `var`, and we run into the same issue as we were seeing in our Chrome extension.
 
 Funnily though, Bing Chat's proposed solution -- to move the logic of adding an event listener to a separate function `createButtonEventListener` -- **actually ends up fixing the actual bug**! This is because when we pass the variable `li` into the `createButtonEventListener` function, we are passing the **reference** to the HTML element *by value*, and since the original bug was caused by the value of `li` (i.e. the reference) being constantly overriden with every loop, we no longer face this problem. In other words, since the event listener function for `button` now gets its own (correct) reference to the `li` element, it works properly. I guess that works too, but as a human, I would've simply declared the `li` variable using the `const` keyword instead. 
 
-The full changes can be found [here](https://github.com/sarckk/gpt_experiments/commit/28d691901317dd08f19dabfb9b993f75d4110f66). This actually introduced another bug that I had to ask GPT to fix (which it did), but afterwards the error messages were correctly appearing next to each button:
+The full changes can be found [here](https://github.com/sarckk/gpt_experiments/commit/28d691901317dd08f19dabfb9b993f75d4110f66). This actually introduced another bug but after I asked GPT to fix it (which it did) things were working correctly! (well, I guess if you can ignore the fact that the API call itself is failing):
 
-<video src="https://sarckk.github.io/media/working.mp4" controls="controls" ></video>
+<video src="https://sarckk.github.io/media/working_mvp.mp4" controls="controls" ></video>
 *Doesn't seem like much but hey, at least I didn't write a single line of code!*
 
-After this point, I played around with the bot a few more times before I stopped. If you are interested, you can find the code -- along with a brief history of changes -- on [github](https://github.com/sarckk/gpt_experiments).
+After this point, I only played around with the bot a few more times before I stopped. If you are interested, you can find the code -- along with a brief history of changes -- on [github](https://github.com/sarckk/gpt_experiments).
 
 
 ## Programming with GPT-4: yay or nay?
-Overall, I think Bing Chat/GPT-4 is a great companion for programming, but as it stands, has a few shortcomings that necessitates a human in the loop. For example, it can give you seemingly a seemingly correct piece of reasoning behind its code that upon closer inspection stands on shaky grounds, like I've demonstrated in my particular example of the Javascript bug. Other times, still, it might suggest a solution that works, but by chance and for the wrong reasons. The examples here and documented elsewhere serve as cautionary tales for anyone inclined to place utmost trust on LLMs. For completeness sake, I do want to highlight the fact that I technically used Bing Chat, which runs a version of GPT-4 particularly optimized for search (and presumably not for code generation), so these limitations may not hold but recent post by [@bradgessler](https://twitter.com/bradgessler) on [pairing with GPT-4](https://fly.io/ruby-dispatch/pairing-with-gpt-4/) seems to have reached a similar conclusion.
+Overall, I think Bing Chat/GPT-4 is a great companion for programming, but as it stands, has a few shortcomings that necessitates the presence of a human in the loop. For example, it can give you seemingly a seemingly correct piece of reasoning behind its code that upon closer inspection stands on shaky grounds, like I've demonstrated in my particular example of the Javascript bug. Other times, still, it might suggest a solution that works, but by chance and for the wrong reasons. The examples here and documented elsewhere serve as cautionary tales for anyone looking to rely on LLMs to generate production-grade code: while technically impressive, these models are not perfect -- well, just like humans. I am also aware that I technically used Bing Chat here, which runs a version of GPT-4 particularly optimized for search (and presumably not for code generation), so these observations may not hold for GPT-4, but a recent post by [@bradgessler](https://twitter.com/bradgessler) on [pairing with GPT-4](https://fly.io/ruby-dispatch/pairing-with-gpt-4/) seems to have reached a similar conclusion.
 
 That said, I am optimistic about the future of software engineering in an age where powerful LLMs are commoditized and accessible. Steve Jobs famously said that computers are like a "bicycle for our minds". With the rapid advancement of LLMs, it will be like adding a jet engine to the bicycle -- these models will serve as powerful tools for us to translate human ideas and ingenuity into languages that computers can understand.
