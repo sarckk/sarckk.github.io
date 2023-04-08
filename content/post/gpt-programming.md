@@ -1,11 +1,11 @@
 ---
 title: Programming with Bing Chat
-date: '2023-04-07'
+date: "2023-04-07"
 categories:
   - AI
 ---
 
-It's been roughly 3 weeks since the release of GPT-4. In the world of AI that means I'm already late to the party, but with extra time this week I thought I'd finally start playing around with it to see what it can do. People have already started leveraging the power of GPT-4 to create impressive projects, like [@ammaar](https://twitter.com/ammaar) who used GPT-4 and other AI tools like MidJourney to [create a 3D game in Javascript from scratch](https://twitter.com/samuelwoods_/status/1642889718336479233) and [@mortenjust](https://twitter.com/mortenjust) who [made and published an iOS app](https://twitter.com/mortenjust/status/1639276571574894594) by prompting GPT-4. 
+It's been roughly 3 weeks since the release of GPT-4. In the world of AI that means I'm already late to the party, but with extra time this week I thought I'd finally start playing around with it to see what it can do. People have already started leveraging the power of GPT-4 to create impressive projects, like [@ammaar](https://twitter.com/ammaar) who used GPT-4 and other AI tools like MidJourney to [create a 3D game in Javascript from scratch](https://twitter.com/samuelwoods_/status/1642889718336479233) and [@mortenjust](https://twitter.com/mortenjust) who [made and published an iOS app](https://twitter.com/mortenjust/status/1639276571574894594) by prompting GPT-4.
 
 Since I spend a considerable time browsing and reading interesting -- mostly tech related -- articles on the internet, I've long been interested in making my own knowledge management solution for the many pages I bookmark. So I thought this would be a perfect little project to play around with GPT-4 to see what it's capable of -- and to catch a glimpse of what software engineering might look like not too far from now. For this experiment, I wanted to create a Chrome extension that would allow users to run semantic Q&A on the contents of their bookmarks. I have built a Chrome extension [before](https://github.com/moduda-live/moduda-extension), so I thought my familiarity with it would help me assess GPT's code.
 
@@ -15,25 +15,26 @@ I don't have ChatGPT Plus -- so I used Bing Chat instead, since it was [recently
 
 Unfortunately, my browser crashed and I lost the history of the chat for this part, but it's not particularly interesting (by GPT standards, anyway). That said, even as someone who came in with high expectations having already what GPT can do, the feeling of describing, at a high level, what you want to build, trying out the code that the neural network outputs, and having it work seamlessly is nothing short of a magical experience.
 
-At this point I had a `main.js` file that fetches the user's bookmarks and displays them, but not much else. I wanted to add a feature whereby the user would click a button next to each bookmark item, which would first grab the content from the link, create an embedding via [OpenAI Embedding API](https://platform.openai.com/docs/guides/embeddings) and index it in the [Pinecone vector database](https://www.pinecone.io/). 
+At this point I had a `main.js` file that fetches the user's bookmarks and displays them, but not much else. I wanted to add a feature whereby the user would click a button next to each bookmark item, which would first grab the content from the link, create an embedding via [OpenAI Embedding API](https://platform.openai.com/docs/guides/embeddings) and index it in the [Pinecone vector database](https://www.pinecone.io/).
 
 I used [this prompt](https://github.com/sarckk/gpt_experiments/blob/53ccd300a92a309397f63790d3f2a708a7065ba4/prompt_test) to ask GPT to do just that:
 
 ![](https://sarckk.github.io/media/first_iter.jpeg)
-*At first I asked the model to index the embedding for all bookmarks* 
+_At first I asked the model to index the embedding for all bookmarks_
 
 ![](https://sarckk.github.io/media/add_spinner.jpeg)
-*Then I asked it to display a spinner when waiting for the API call and to show a red error message when it fails*
+_Then I asked it to display a spinner when waiting for the API call and to show a red error message when it fails_
 
 ![](https://sarckk.github.io/media/add_spinner_css.jpeg)
-*It even generated the correct CSS for the spinning animation!* 
+_It even generated the correct CSS for the spinning animation!_
 
 ![](https://sarckk.github.io/media/add_button.jpeg)
-*Then I thought it'd probably be a better idea to have a button next to each bookmark item that users could press to create the embedding and index it in the DB*
+_Then I thought it'd probably be a better idea to have a button next to each bookmark item that users could press to create the embedding and index it in the DB_
 
-In the end, it came up with [this](https://github.com/sarckk/gpt_experiments/tree/53ccd300a92a309397f63790d3f2a708a7065ba4). The API calls to OpenAI and Pinecone endpoints were not correct -- both using a wrong endpoint (e.g. `https://api.pinecone.io/v1/vector-indexes/<INDEX_NAME>/vectors`) and passing in invalid data in the body -- but this was somewhat expected because training data for GPT-4 (which were [cut off at September 2021](https://openai.com/research/gpt-4)) presumably didn't contain data about these services. 
+In the end, it came up with [this](https://github.com/sarckk/gpt_experiments/tree/53ccd300a92a309397f63790d3f2a708a7065ba4). The API calls to OpenAI and Pinecone endpoints were not correct -- both using a wrong endpoint (e.g. `https://api.pinecone.io/v1/vector-indexes/<INDEX_NAME>/vectors`) and passing in invalid data in the body -- but this was somewhat expected because training data for GPT-4 (which were [cut off at September 2021](https://openai.com/research/gpt-4)) presumably didn't contain data about these services.
 
-## A subtle Javascript bug 
+## A subtle Javascript bug
+
 Never mind the API issues, I loaded up the updated version of the extension locally to see if other changes (like the interactions around the buttons, spinning animation, and error messages) were working correctly. Not quite --
 
 <video src="https://sarckk.github.io/media/buggy_mvp.mp4" controls="controls" ></video>
@@ -69,13 +70,14 @@ For those who are not familiar with Javascript, `var` is one of three ways you c
 if (true) {
   var fruit = "Apple"
 }
-console.log(fruit) 
+console.log(fruit)
 
 // output
 Apple
 ```
 
 while this is not:
+
 ```
 if (true) {
   let fruit = "Apple"
@@ -105,7 +107,8 @@ When the user clicks on a button, it calls the callback function for that button
 
 Phew! That completes the explanation for why we were seeing the error message and spinner show only on the very last item in our list no matter what button we were clicking. Javascript can be confusing sometimes!
 
-## Back to Bing 
+## Back to Bing
+
 Now that we're done with that brief detour to Javascript technicalities, let's see if the AI could spot the mistake in its code:
 
 ![](https://sarckk.github.io/media/can_you_spot_error.png)
@@ -136,17 +139,17 @@ Even if we accept that the event listener function for `button` closes over `err
 
 As you can see, clicking the button for spinner X only changes the text content for spinner X, and leaves the other spinners untouched. This is because `spinner` is declared with `const` and is block-scoped. Try changing this to `var`, and we run into the same issue as we were seeing in our Chrome extension.
 
-Funnily though, Bing Chat's proposed solution -- to move the logic of adding an event listener to a separate function `createButtonEventListener` -- **actually ends up fixing the actual bug**! This is because when we pass the variable `li` into the `createButtonEventListener` function, we are passing the **reference** to the HTML element *by value*, and since the original bug was caused by the value of `li` (i.e. the reference) being constantly overriden with every loop, we no longer face this problem. In other words, since the event listener function for `button` now gets its own (correct) reference to the `li` element, it works properly. I guess that works too, but as a human, I would've simply declared the `li` variable using the `const` keyword instead. 
+Funnily though, Bing Chat's proposed solution -- to move the logic of adding an event listener to a separate function `createButtonEventListener` -- **actually ends up fixing the bug**! This is because when we pass the variable `li` into the `createButtonEventListener` function, we are passing the **reference** to the HTML element _by value_, and since the original bug was caused by the value of `li` (i.e. the reference) being constantly overriden with every loop, we no longer face this problem. In other words, since the event listener function for `button` now gets its own (correct) reference to the `li` element, it works properly. I guess that works too, but as a human, I would've simply declared the `li` variable using the `const` keyword instead.
 
 The full changes can be found [here](https://github.com/sarckk/gpt_experiments/commit/28d691901317dd08f19dabfb9b993f75d4110f66). This actually introduced another bug but after I asked GPT to fix it (which it did) things were working correctly! (well, I guess if you can ignore the fact that the API call itself is failing):
 
 <video src="https://sarckk.github.io/media/working_mvp.mp4" controls="controls" ></video>
-*Doesn't seem like much but hey, at least I didn't write a single line of code!*
+_Doesn't seem like much but hey, at least I didn't write a single line of code!_
 
 After this point, I only played around with the bot a few more times before I stopped. If you are interested, you can find the code -- along with a brief history of changes -- on [github](https://github.com/sarckk/gpt_experiments).
 
-
 ## Programming with GPT-4: yay or nay?
+
 Overall, I think Bing Chat/GPT-4 is a great companion for programming, but as it stands, has a few shortcomings that necessitates the presence of a human in the loop. For example, it can give you seemingly a seemingly correct piece of reasoning behind its code that upon closer inspection stands on shaky grounds, like I've demonstrated in my particular example of the Javascript bug. Other times, still, it might suggest a solution that works, but by chance and for the wrong reasons. The examples here and documented elsewhere serve as cautionary tales for anyone looking to rely on LLMs to generate production-grade code: while technically impressive, these models are not perfect -- well, just like humans. I am also aware that I technically used Bing Chat here, which runs a version of GPT-4 particularly optimized for search (and presumably not for code generation), so these observations may not hold for GPT-4, but a recent post by [@bradgessler](https://twitter.com/bradgessler) on [pairing with GPT-4](https://fly.io/ruby-dispatch/pairing-with-gpt-4/) seems to have reached a similar conclusion.
 
 That said, I am optimistic about the future of software engineering in an age where powerful LLMs are commoditized and accessible. Steve Jobs famously said that computers are like a "bicycle for our minds". With the rapid advancement of LLMs, it will be like adding a jet engine to the bicycle -- these models will serve as powerful tools for us to translate human ideas and ingenuity into languages that computers can understand.
