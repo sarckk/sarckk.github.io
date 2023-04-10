@@ -1,5 +1,5 @@
 ---
-title: Grokking Transformers
+title: Grokking Transformers (WIP)
 date: '2023-04-10'
 categories:
   - AI
@@ -103,9 +103,9 @@ Dot products form the basis of the attention mechanism.
 ### The Attention mechanism
 The attention mechanism involves 3 components: query(s), keys(s), and value(s) where these are all vectors. More formally, we have:
 
-- Queries $q_1,...,q_T$ where $q_i \in \R^{d_k}$, where $d_k$ is the dimension of the query vector, and $T$ is the number of queries
-- Keys $k_1,...k_K$ where $k_i \in \R^{d_k}$, and $K$ is the number of key-value pairs
-- Value $v_1,...,v_K$ where $v_i \in \R^{d_v}$, where $d_v$ is the dimension of the value vector, which is not necessarily equal to $Q$, although in our case of English-German translation, it is.
+- Queries $q_1,...,q_T$ where $q_i \in$ $\R^{d_k}$, where $d_k$ is the dimension of the query vector, and $T$ is the number of queries
+- Keys $k_1,...k_K$ where $k_i \in$ $\R^{d_k}$, and $K$ is the number of key-value pairs
+- Value $v_1,...,v_K$ where $v_i \in$ $\R^{d_v}$, where $d_v$ is the dimension of the value vector, which is not necessarily equal to $Q$, although in our case of English-German translation, it is.
 
 Note that $T$, the number of queries doesn't necessarily have to equal $K$, the number of key-value pairs, but the number of keys must be the same as the number of values (for them to form a key-value pair). Furthermore, the query and key vectors must have the same dimension, $d_k$ so we can do a dot product.
 
@@ -119,9 +119,13 @@ Given this formulation, the attention function on $q_i$ does the following:
 Back to our example sentence, we have $x_1,...,x_9$ where $x_i$ is a 512-dimensional embedding vector representing each word in the sentence `"This jacket is too small for me"` plus the `<BOS>` and `<EOS>` tokens. We obtain our query, key and value vectors from $x_i$ by multiplying it each time with a different matrix:
 
 \begin{equation}
-k_i = Kx_i, where K is a $d_k \times d_k$ matrix.
-q_i = Qx_i, where Q is a $d_k \times d_k$ matrix.
-v_i = Vx_i, where V is a $d_v \times d_v$ matrix.
+k_i = Kx_i, where K is a d_k \times d_k matrix.
+\end{equation}
+\begin{equation}
+q_i = Qx_i, where Q is a d_k \times d_k matrix.
+\end{equation}
+\begin{equation}
+v_i = Vx_i, where V is a d_v \times d_v matrix.
 \end{equation}
 
 In our case, $d_k=d_v=512$. It's important that $K$, $Q$ and $V$ are separate matrices (and therefore independently traininable) because this allows for more flexibility in both how the model chooses to define "similarity" between words (by updating $K$ and $Q$), as well as what the final weighted sum represents (by updating $V$) in latent space. In Pytorch code, these matrices are implemented as `nn.Linear()` modules with `bias=False`. 
@@ -143,7 +147,7 @@ In short, we can formulate the attention mechanism described above as:
  Attention(Q,K,V) = softmax(\frac{QK^T}{\sqrt{d_k}})V
 \end{equation}
 
-This is the standard matrix formulation of attention that the authors use in the Transformers paper (page 4). Notice that we are scaling the matrix ${QK_T}$ (i.e. the dot-product between all rows of query-matrix $Q$ with all columns of key-matrix $K$) by $\frac{1}{d_k}$, to prevent dot products from becoming too large, "pushing the softmax function into regions where it has extremely small gradients ([Viswani et al, 2017, pg 4](https://arxiv.org/pdf/1706.03762.pdf))".
+This is the standard matrix formulation of attention that the authors use in the Transformers paper (page 4). Notice that we are scaling the matrix ${QK_T}$ (i.e. the dot-product between all rows of query-matrix $Q$ with all columns of key-matrix $K$) by $\frac{1}{d_k}$, to prevent dot products from becoming too large, "pushing the softmax function into regions where it has extremely small gradients" ([Viswani et al, 2017, pg 4](https://arxiv.org/pdf/1706.03762.pdf)).
 
 This ability for parallelization is a part of why the Transformer has been so successful -- previous models based on recurrence, for example, cannot be parallelized because the computation of its state at time $t$, $h_t$ necessarily depends on the computation of its previous state at time $t-1$, $h_{t-1}$.
 

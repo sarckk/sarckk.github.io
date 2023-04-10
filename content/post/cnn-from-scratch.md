@@ -313,7 +313,9 @@ Remember that max pooling layers have no learnable weights! Our aim with backpro
 
 Keeping this in mind, let's think about how to compute $\frac{\partial o}{\partial x}$, where again we denote the result of max pooling as $o$ (remember that if we have  $\frac{\partial o}{\partial x}$, we can compute $\frac{\partial L}{\partial x}$ because we already have $\frac{\partial L}{\partial o}$). During the forward pass, we take the max value in every `2 x 2` region. Therefore, intuitively, every other value in the region that is not the max will not change the output $o$. These values therefore have 0 gradient. For the max value, we simply assign the corresponding gradient value. Below is an illustration ([source](https://medium.com/@eternalzer0dayx/demystifying-convolutional-neural-networks-ca17bdc75559)):
 
+<p align="center" width="100%">
 <img src='https://miro.medium.com/max/1098/0*jDAl5F-y3qzvcObd.png' width='500'/>
+</p>
 
 The code we have written for backprop is simply translating this idea to code:   
 
