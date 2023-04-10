@@ -1,7 +1,7 @@
 ---
 title: Things I learned recently
 date: '2023-02-12'
-categories:
+tags:
   - Reflections
 ---
 

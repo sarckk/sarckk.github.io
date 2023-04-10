@@ -3,6 +3,8 @@ title: Programming with Bing Chat
 date: "2023-04-07"
 categories:
   - AI
+tags:
+  - AI
 ---
 
 It's been roughly 3 weeks since the release of GPT-4. In the world of AI that means I'm already late to the party, but with extra time this week I thought I'd finally start playing around with it to see what it can do. People have already started leveraging the power of GPT-4 to create impressive projects, like [@ammaar](https://twitter.com/ammaar) who used GPT-4 and other AI tools like MidJourney to [create a 3D game in Javascript from scratch](https://twitter.com/samuelwoods_/status/1642889718336479233) and [@mortenjust](https://twitter.com/mortenjust) who [made and published an iOS app](https://twitter.com/mortenjust/status/1639276571574894594) by prompting GPT-4.
