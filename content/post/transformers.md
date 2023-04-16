@@ -8,9 +8,9 @@ tags:
   - LLM
 ---
 
-Today's Large Language Models (LLM) are based on Transformers, a deep learning model architecture for sequence-to-sequence transformations based on the attention mechanism. While it was originally proposed and used in Natural Language Processing (NLP) tasks like language translation, it turns out that a lot of things that we care about can be modelled in terms of sequences, making transformers a useful model in a wide variety of applications beyond NLP, such as [image processing]() and [reinforcement learning](). Given the overwhelming success of transformers in deep learning and the outsized impact that transformer-based generative AI (e.g. GPT) has had -- and will likely continue to have -- on our society, I thought I should finally take time to read and understand the paper ["Attention Is All You Need" (Vaswani et al., 2017)](https://arxiv.org/abs/1706.03762) that first proposed Transformers. That paper is now almost 6 years old(!) but better late than never, right?
+Today's Large Language Models (LLM) are based on Transformers, a deep learning model architecture for sequence-to-sequence transformations based on the attention mechanism. While it was originally proposed and used in Natural Language Processing (NLP) tasks like language translation, it turns out that a lot of things that we care about can be modelled in terms of sequences, making transformers a useful model in a wide variety of applications beyond NLP, such as [image processing](https://arxiv.org/abs/2103.14030) and [reinforcement learning](https://arxiv.org/abs/2106.01345). Given the overwhelming success of transformers in deep learning and the outsized impact that transformer-based generative AI (e.g. GPT) has had -- and will likely continue to have -- on our society, I thought I should finally take time to read and understand the paper ["Attention Is All You Need" (Vaswani et al., 2017)](https://arxiv.org/abs/1706.03762) that first proposed Transformers. That paper is now almost 6 years old(!) but better late than never, right?
 
-There are already many writings covering transformers on the internet, so this article is mostly for my own learning -- this is already [well documented](https://ideas.time.com/2011/11/30/the-protege-effect/), but I find that writing in a pedagogical style helps immensely in solidifying in my learnings and is almost always worth the effort. If anyone else stumbles across this post and finds it helpful, that's an added bonus!
+There are already [many](https://jalammar.github.io/illustrated-transformer/) [tutorials](https://www.youtube.com/watch?v=n9sLZPLOxG8) [covering](https://www.youtube.com/watch?v=n9sLZPLOxG8) [transformers](https://www.youtube.com/watch?v=ptuGllU5SQQ) online, so this article is mostly for my own learning -- this is already [well documented](https://ideas.time.com/2011/11/30/the-protege-effect/), but I find that writing in a pedagogical style helps immensely in solidifying in my learnings and is almost always worth the effort. If anyone else stumbles across this post and finds it helpful, that's an added bonus!
 
 This post will cover the technical details behind the Transformer model. The core concept behind transformers -- self- and cross- attention -- really isn't too hard too grasp, but I've found that actually getting your hands dirty and implementing the model in Pytorch elevates your understanding of the material. Personally, I ran into many issues while trying to write and train the model that I wouldn't have known had I stopped at reading the paper or other tutorials online.
 
@@ -62,8 +62,7 @@ Above is an illustration of what this would look like for a mini-batch of 3 Engl
 Before we can pass this into the encoder, we need to convert these sequences of strings into a numerical representation instead so we can do some computation and make GPUs go *brrr*. To do this, we create -- from the dataset -- a mapping from all possible tokens (in this case, words) to its index in a vocabulary. So, the word "The" might have an index of 37, which uniquely identifies that token. We also leave out some indices for the special tokens that we introduced (`<BOS>`, `<EOS>` and `<PAD>`): for example, their indices might be 0, 1 and 2 respectively.
 
 ### Step 2: Number -> Embedding Vector
-Once we have the input tensor, we turn each word (which by this point is a number representing its index in our vocabulary) into a high-dimensional vector that we call an **embedding vector**. In the original paper, the embedding vector is **512-dimensional**, but this is a hyperparameter that we can tune for our model through experiments. 
-
+Once we have the input tensor, we turn each word (which by this point is a number representing its index in our vocabulary) into a high-dimensional vector that we call an **embedding vector**. This can be implemented using PyTorch's `nn.Embedding()` module. In the original paper, the embedding dimension is **512**, but this is a hyperparameter that we can tune for our model through experiments. Note that in the paper, they also multiply the embedding weights by `sqrt` of the embedding dimension (see page 5).
 
 After this step, we have a tensor of shape (batch size, (max) input sequence length, embedding dimension). For the rest of the article, I'll use the short form `B` for batch size, `T` for the maximum input sequence length, and `D` for the embedding dimension. In our example, `B=3`, `T=9` and `D=512`.
 
@@ -91,7 +90,7 @@ Remember that at this point, our example input to the Encoder is a tensor of sha
 
 Let's look at just one sentence: "This jacket is too small for me". After the embedding layer, we have a tensor of shape `(9,512)`. To encode this tensor, we essentially pass all 9 of the 512-dimensional embedding vector to the self-attention module **at the same time**:
 
-![]()
+![TODO: insert illustration here]()
 
 The goal of the self-attention module is to figure out how the words in the sentence (or more generally, tokens in a sequence) relate to each other. 
 
@@ -99,7 +98,7 @@ Remember, the sentence is "This jacket is too small for me". When we look at the
 
 Dot products form the basis of the attention mechanism.
 
-### Attention
+### A closer look at attention
 Computing attention involves 3 inputs: query(s), keys(s), and value(s) where these are all vectors. More formally, we have:
 
 - Queries $q_1,...,q_T$ where $q_i \in$ $\R^{d_k}$, where $d_k$ is the dimension of the query vector, and $T$ is the number of queries
@@ -126,7 +125,10 @@ In our case, $d_k=d_v=512$. We have $K$, $Q$ and $V$ matrices (and therefore ind
 
 Now that we have $k_i$, $q_i$ and $v_i$, we just compute the corresponding output for $x_i$ using the steps outlined earlier, computing the sum of all vectors weighed by the dot products. Here, since $q_i$,$k_i$ and $v_i$ are all derived from $x_i$, we give it a special name: **self-attention**. 
 
-![Illustration of self-attention]()
+<p align="center" width="100%">
+<img src=""/>
+Illustration of self-attention here
+</p>
 
 ### Attention, with matrices
 As you can see, attention is computed using dot products between any two words within a sequence, allowing the Transformer to learn long-range dependencies in a sequence more easily. One downside of this, though, is that the computation of attention scores is quadratic in the length of the input sequence $N$. This quadratic $O(N^2)$ complexity is an issue because it means it will take a lot of compute for long sequences. 
@@ -193,9 +195,7 @@ class PositionalEncoding(nn.Module):
 
 Note that the  `self.register_buffer('pe', pe)` line is important because while the positional encodings do not have trainable parameters, this adds the encoding to the model's parameters and ensures that it is saved during `torch.save()`.
 </details>
-
-### Masking
-Another important detail to mention at this point is masking.   
+<br/>
 
 ### Multi-Head Attention
 In the paper, the authors use **Multi-Head Attention (MHA)**. In MHA we have multiple "heads" that each performs the attention computation that we *just* talked about. However, each head $h_i$ has its own linear projection matrices $K_i$, $Q_i$, and $V_i$, and these matrices project the key, query and value vectors to a **lower** dimensional space than we had with single matrices.
@@ -205,6 +205,103 @@ For example, if the dimension of matrix $K$ in **Single-Head Attention** was $51
 After all the heads compute its own value of `Attention(X,Q_i,K_i,V_i)` in parallel, we concatenate the outputs to obtain an output of the same shape as we had in the case of single-head attention. This is followed by a final linear projection to $d_{emb}$-dimensional space where $d_{emb}$ is the embedding dimension. For our example input of shape `(9,512)`, MHA produces an output of the same shape.
 
 The intuition behind why having multiple heads improves performance is that by having independently trainable linear projections per head, the model is able to simultaneously attend to different aspects of the language (for example, for a model trained on LaTeX documents, it might have one head that learns to attend to a presence of a `\end` command if a `\begin` command appears in the sequence, and another head that relates words in terms of their semantic relevance in text).
+
+<details>
+<summary>PyTorch implementation of Mult-Head Attention</summary>
+
+```python
+class MultiHeadAttention(nn.Module):
+  def __init__(self,
+               emb_dim: int,
+               n_heads: int,
+               is_cross: bool):
+    super().__init__()
+    assert emb_dim % n_heads == 0, "Embedding dimension must be divisble by number of heads"
+    self.n_heads = n_heads
+    self.emb_dim = emb_dim
+    self.head_dim = emb_dim // n_heads
+    self.is_cross = is_cross
+    if not is_cross:
+      # This projects each word vector into a new vector space (and we have n_heads amount of different vector spaces)
+      self.kqv_project = nn.Linear(self.emb_dim, self.emb_dim * 3, bias=False) 
+    else:
+      self.kv_project = nn.Linear(self.emb_dim, self.emb_dim * 2, bias=False)
+      self.q_project = nn.Linear(self.emb_dim, self.emb_dim, bias=False)
+    self.out_project = nn.Linear(self.emb_dim, self.emb_dim)
+  
+  def forward(self, 
+              query: Tensor, # [bsz, q_seq_len, emb_dim]
+              kv: Tensor, # [bsz, kv_seq_len, emb_dim]
+              # The mask is a tensor where masked positions are -inf and unmasked are 0s
+              # This is used for three cases currently: 
+              # 1) attention mask for masking future tokens in decoder
+              # 2) padding mask for encoder 
+              # 3) padding mask for decoder (where we want to mask out tokens that correspond to paddings in kv)
+              mask: Optional[Tensor] = None, # [bsz, 1, 1, kv_seq_len] or [bsz, 1, q_seq_len, q_seq_len] where q_seq_len == kv_seq_len for self-attention
+              ) -> Tensor:
+    bsz, kv_seq_len, _ = kv.shape
+    q_seq_len = query.shape[1]
+
+    if not self.is_cross: # self-attention
+      assert q_seq_len == kv_seq_len
+      kqv = self.kqv_project(kv) # [bsz, kv_seq_len, emb_dim * 3]
+      # reshape for multi-head attention
+      kqv = kqv.view(bsz, kv_seq_len, self.n_heads, self.head_dim * 3).transpose(1,2) # [bsz, n_heads, seq_len, head_dim * 3]
+      K, Q, V = kqv.chunk(3,dim=-1) # K=Q=V => [bsz, n_heads, seq_len, head_dim]
+    else:
+      # K, V should come from encoder values, and Q from decoder
+      kv_projected = self.kv_project(kv).view(bsz, kv_seq_len, self.n_heads, self.head_dim * 2).transpose(1,2)
+      K, V = kv_projected.chunk(2, dim=-1) # [bsz, n_heads, kv_seq_len, head_dim]
+      Q = self.q_project(query).view(bsz, -1, self.n_heads, self.head_dim).transpose(1,2) # [bsz, n_heads, q_seq_len, head_dim]
+
+    # print(f"K shape: {K.shape}\t V shape: {V.shape}\t Q shape: {Q.shape}")
+    attn_weights = torch.einsum('bhqd,bhkd->bhqk',[Q,K]) # [bsz, n_heads, q_seq_len, kv_seq_len] 
+    attn_weights /= math.sqrt(self.head_dim) 
+
+    if mask is not None:
+      attn_weights += mask
+
+    # softmax across last dim as it represents attention weight for each embedding vector in sequence
+    softmax_attn = F.softmax(attn_weights, dim=-1) 
+    out = torch.einsum('bhql,bhld->bhqd',[softmax_attn, V]) # [bsz, n_heads, q_seq_len, head_dim]
+    out = out.transpose(1,2).reshape(bsz, -1, self.n_heads * self.head_dim) # [bsz, q_seq_len, emb_dim]
+    return self.out_project(out)
+```
+</details>
+<br/>
+
+--- 
+
+### Masking
+The last important detail to mention at this point for the encoder is **masking**. Recall that in our input sequence, we used a special token for padding, `<PAD>`. Because these are just dummy tokens added to ensure all sequences in a batch are of the same length, during attention computation we'd like to exclude the embedding vectors corresponding to these padding tokens from the weighted sum, by setting their weights to 0. 
+
+![TODO: Illustration here]()
+
+To do this, we can't just set the weights in the corresponding positions to 0 *after* softmax, because then the weights will no longer sum to 1. Instead, we can apply a mask to the dot products **before** softmax such that after softmax, their values become 0 -- we do this by adding negative infinity $-\infty$ to positions corresponding to the padding tokens.
+
+In PyTorch, you can create a padding mask like so:
+
+```python
+def create_padding_mask(xs: Tensor, # (B, S)
+                        pad_idx: int 
+                        ) -> Tensor:
+  batch_size, seq_len = xs.shape
+  mask = torch.zeros(xs.shape).to(device)
+  mask_indices = xs == pad_idx
+  mask[mask_indices] = float('-inf')
+  return mask.reshape(batch_size,1,1,seq_len) # (B, 1, 1, S)
+```
+
+The `create_padding_mask()` function takes a PyTorch tensor of shape `(B,S)` and the index of the padding token in vocabulary and returns a mask of shape `(B,1,1,S)`. As I established earlier in the article, `B` is the batch size and `S` is the sequence length. There are 2 additional dimensions in the output because of the way we apply the m ask in MHA:
+
+```python
+# attn_weights has shape (B, n_heads, query_seq_len, key_value_seq_len)
+attn_weights += mask
+```
+
+Since `mask` has shape `(B,1,1,S)`, we [broadcast](https://pytorch.org/docs/stable/notes/broadcasting.html) across the 2nd and 3rd dimensions. The 2nd dimension broadcasts across the number of attention heads, while the 3rd dimension broadcasts the number of query vectors. While for self-attention, the number of query vectors equals the number of key and value vectors since they all get generated from the same source vectors, this isn't true in [**cross-attention**](), which we'll get to later when we look at the decoder. This is why we don't generate a padding mask of shape `(B,1,S,S)`, although we technically can for self-attention. 
+
+---
 
 ### Feed-Forward Network
 Recall that self-attention is only the first part of a Transformer Encoder. The issue with only having self-attention is that it is a linear transformation with respect to each element/position in a sequence; as we have seen, self-attention is basically a weighted sum (linear) where the weights are computed from dot products (also linear). And we know that nonlinearities are important in deep learning because it allows neural networks to approximate a wide range of functions (or all continous functions, as the [Universal approximation theorem](https://en.wikipedia.org/wiki/Universal_approximation_theorem) tells us).
@@ -225,6 +322,8 @@ In the paper, `hidden_dimension` is set to a value of 2048 (embedding dimension 
 
 To recap: if we have a tensor of shape `(9,512)` at the start of the Encoder, after passing through Multi-Head Attention, we get back an output of the same shape. When we pass this through the feed forward net as defined above, we basically pass each of the nine `512`-dimensional vectors through the neural network in parallel and join them together to get back a final output tensor of the same shape `(9,512)`. This works because the last dimension of the input tensor (512) is the same as the dimension of the input features of the network. Note that again, I excluded the batch dimension (i.e. in a mini-batch, the tensors will be of shape `(B,T,D)` instead of `(T,D)` that I have used in this example) because the same analysis holds even for bigger batch sizes.
 
+---
+
 ### Encoder: the remaining bits
 Here are the remaining details for the Encoder:
 - Use of **residual connections** around both the self-attention and feed-forward network sublayers. First introduced in 2015 by the famous [ResNet paper](https://arxiv.org/abs/1512.03385), residual connections here basically means instead of the sublayer output being `f(x)`, it is `x + f(x)`, which helps with training by providing a gateway for gradients to pass through more easily during backprop.
@@ -239,6 +338,8 @@ Let's end this section by revisiting the Encoder diagram from the paper:
 <p align="center" width="100%">
 <img src="https://sarckk.github.io/media/encoder_here.png"/>
 </p>
+
+Everything shown in the diagram should be familiar to us by now. In particular, note how there are 3 arrows going into the Multi-Head Attention module: these represent key, query and values.
 
 ## Decoder
 Phew! There was quite a lot to cover for Encoders. Fortunately, I've already covered most of the important parts of the Transformer -- the decoding part more or less mirrors what we had in the encoding phase, with a few key differences. 
@@ -260,19 +361,75 @@ Again, in the context of the machine translation task that the original Transfor
 </p>
 
 ### Difference #2: Masking in self-attention
-The other difference between decoders and encoders is in the masking used in self-attention. Recall that in an encoder, masking was used to prevent  
+The other difference between decoders and encoders is in the masking. Within the decoder, the masks used in self-attention and cross-attention are different, too.
+
+**Masking in self-attention**
+
+First, let's talk about masking in self-attention. In the decoding stage, the objective is: for each position, correctly predict what token should be at the next position. Therefore, unlike in the encoder, we can't access information about future positions to make a prediction for any given position in the sequence. This is especially true at inference time, where we do not have access to what comes after the current token by definition (otherwise we wouldn't need the model at all), but during training time, we do have information about the full translated sequence so we need to mask out, for each position, all the positions that come after it. It's best to illustrate this with a figure:
+
+<p align="center" style="display:flex; flex-direction: column; align-items: center;">
+<img src="" width=400>
+<caption>Illustration of the concept here</caption>
+</p>
+
+This is a mask where the upper triangular part are negative infinities. Here's the code that generates this mask:
+
+```python
+def create_decoder_mask(seq_len: int) -> Tensor:
+  mask = torch.zeros(seq_len, seq_len).to(device)
+  mask_indices = torch.arange(seq_len)[None, :] > torch.arange(seq_len)[:, None] 
+  mask[mask_indices] = float('-inf')  
+  return mask.reshape(1,1,seq_len,seq_len) # (1, 1, S, S)
+```
+
+The function takes in the length of the target sequence and returns a mask with shape `(1,1,S,S)`. Recall that the self-attention mask for the **encoder** had shape `(B,1,1,S)`. In the decoder, I've set the first dimension as `1` for broadcasting, but it can very well be `B` as well. However, the third dimension has to be `S` and not `1`, since the mask used in the decoder is two-dimensional, and thus needed to be $S \times S$. 
+
+When I was researching on how masking works in the decoder, the examples I could find also added a mask to exclude the padding tokens, as we did in the encoder. However, I don't think this is actually needed for self-attention in the decoder. Here's a brain dump of my reasoning:
+
+> For any given position $i$, There are two possibilities: 
+> 1. It *isn't* a padding token. Due to our upper triangular mask, we don't consider any tokens that comes afterwards in the weighted sum. Any tokens before it are necessarily not padding tokens because position $i$ isn't a padding token and we can't have a padding token that comes before a non-padding token (except the final `<EOS>` token, but this isn't included in the input to the decoder during training because the decoder inputs are shifted right -- more on this in the upcoming section on [Training]()).
+> 2. It *is* a padding token. Again, we don't consider any tokens that comes afterwards. The positions before it might have padding tokens. So the output of attention at position $i$ would wrongly have included information from some padding tokens, but this doesn't matter because in the final loss calculation we ignore all positions with padding tokens (again, more on this later).
+
+I haven't found a resource online that explicitly confirms this, so I could very well wrong -- if so, please let me know by submitting an issue [here](https://github.com/sarckk/sarckk.github.io).
+
+<br/>
+
+**Masking in cross-attention** 
+
+In cross-attention, because the key and value vectors that we're using to calculate dot products and calculate the weighted sum respectively come from the final output of the encoder, we don't need to mask future tokens, because all of this information should be available to us in the decoding stage. However, we still need to mask out the positions which correspond to padding tokens in the encoder's input like we did for self-attention in the encoder.
+
+Recall the [shape of the padding mask](), which was `(B,1,1,S)`, where `S` is the length of the source token sequence. Let's think about the shape of the dot product matrix, $QK^T$. Let `T` be the target token sequence length. Then, $QK^T$ will be a matrix $\in \R^{T \times S}$. When we consider multiple heads and batch size, then the result of our attention weights will be of shape `(B,n_heads,T,S)`. Using broadcasting, we just add the padding mask to these attention weights, and calculate the weighted sum.
+
+That's it!
 
 ## Linear + Softmax Layer
 As a final step, the output from the last decoder is passed to a linear layer that projects the embedding vectors to a dimension given by the vocabulary size of the target language, followed by a softmax layer to convert those values into probabilities that sum to 1. For example, if we translating from English to German, and the dataset we're training on has a German vocabulary size of 37000, then the linear layer will take `emb_dimension` input features (e.g. 512) and have 37000 output features. After softmax, the value at $i^{th}$ dimension of the vector at $k^{th}$ position in the sequence will be probability for the $i^{th}$ word/token in the vocabulary in the $(k+1)^{th}$ position.
 
-That concludes the section on the Transformer architecture. 
-
 # Training 
+Now let's talk about training. My goal in this section is to really spell out all the minute details of training a Transformer model on machine translation.
+
+# Inference
 
 # Conclusion
-TODO
+As I mentioned in the beginning of this article, I wrote this post mostly for myself, as a sort of recap of what I've learned. That said, even with so many tutorials online on this now-6-years-old technology, I still think what I have here might be useful to anyone who might across it, especially if they are somewhat new to deep learning; most tutorials I've seen on Transformers tend to gloss over some details especially around masking as well as how the encoder/decoder input vectors, and the key,query and value vectors in attention are generated. What I've attempted to do in this post is to document everything that I've had to learn and understand to train a simple Transformer model. I've already learned a lot writing this article, but I hope that it also helps someone out there.
 
-The code for the article can be found on my [github](https://github.com/sarckk/transformer_series/blob/main/transformers.ipynb). My aim was to get the training working as quickly as possible so it's far from polished.
+The code for the article can be found on my [github](https://github.com/sarckk/transformer_series/blob/main/transformers.ipynb). It's not very polished because it just served as a playground for me to quickly set up and train the Transformer model on English-to-German translation.
 
+# Acknowledgements
+Here are some resources that I've used to learn about Transformers
+- [Stanford CS224N Lecture 9 - Self-Attention and Transformers](https://www.youtube.com/watch?v=ptuGllU5SQQ). Probably the best lecture on Transformers online. This is the video that made attention and Transformers *click* for me.
+- [PyTorch implementation of Transformer by Gordic Aleksa (AI Epiphany)](https://github.com/gordicaleksa/pytorch-original-transformer) and the accompanying [video tutorial](https://www.youtube.com/watch?v=n9sLZPLOxG8). I didn't refer to the implementation for the most part, but I did use it as reference to debug an issue I had with my implementation.
 
+# Where to go from here
+As an addendum, I'll just include some links to resources that I've come across that might serve as good next steps after understanding the Transformer. These are also things I'd like to read up in the near future:
 
+- [A review of Transformer family of models](https://lilianweng.github.io/posts/2023-01-27-the-transformer-family-v2/)
+- [Mechanistic Interpretability research](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J)
+  - Related: [A Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html)
+- [Kaparthy's GPT from scratch](https://www.youtube.com/watch?v=kCc8FmEb1nY)
+- [GPT in 160 lines of numpy](https://jaykmody.com/blog/gpt-from-scratch/)
+  - Related: check out my previous blog post on [CNNs from scratch in numpy](https://sarckk.github.io/post/2022/03/20/convolutional-neural-networks-from-scratch/).
+- [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding
+](https://arxiv.org/abs/1810.04805)
+- [Linformer: Self-Attention with Linear Complexity](https://arxiv.org/abs/2006.04768)
+- [Flash Attention](https://arxiv.org/abs/2205.14135)
