@@ -14,7 +14,40 @@ There are already [many](https://jalammar.github.io/illustrated-transformer/) [t
 
 This post will cover the technical details behind the Transformer model. The core concept behind transformers -- self- and cross- attention -- really isn't too hard too grasp, but I've found that actually getting your hands dirty and implementing the model in Pytorch elevates your understanding of the material. Personally, I ran into many issues while trying to write and train the model that I wouldn't have known had I stopped at reading the paper or other tutorials online.
 
-## All about transformations
+<div id="toc"></div>
+
+# Table of Contents <!-- omit from toc --> 
+- [All about transformations](#all-about-transformations)
+- [Diving into Transformers: the architecture](#diving-into-transformers-the-architecture)
+  - [Diving deeper: the embedding layer](#diving-deeper-the-embedding-layer)
+    - [Step 1: String -\> Number](#step-1-string---number)
+    - [Step 2: Number -\> Embedding Vector](#step-2-number---embedding-vector)
+    - [Step 3: Adding Positional Encoding](#step-3-adding-positional-encoding)
+  - [Encoder](#encoder)
+    - [Attention is all you need](#attention-is-all-you-need)
+    - [A closer look at attention](#a-closer-look-at-attention)
+    - [Matrix formulation of attention](#matrix-formulation-of-attention)
+    - [Back to Positional Encodings](#back-to-positional-encodings)
+    - [Multi-Head Attention](#multi-head-attention)
+    - [Masking in the encoder](#masking-in-the-encoder)
+    - [Feed-Forward Network](#feed-forward-network)
+    - [Encoder: the remaining bits](#encoder-the-remaining-bits)
+  - [Decoder](#decoder)
+    - [Difference #1: Cross-Attention](#difference-1-cross-attention)
+    - [Difference #2: Masking in self-attention](#difference-2-masking-in-self-attention)
+  - [Linear + Softmax Layer](#linear--softmax-layer)
+- [Training](#training)
+    - [Loss function](#loss-function)
+    - [Regularization](#regularization)
+    - [Model hyperparameters](#model-hyperparameters)
+    - [Optimizer](#optimizer)
+    - [Learning-rate scheduling](#learning-rate-scheduling)
+- [Inference](#inference)
+- [Conclusion](#conclusion)
+- [Acknowledgements](#acknowledgements)
+- [Where to go from here](#where-to-go-from-here)
+
+# All about transformations
 A Transformer -- as its name suggests -- *transforms* an input sequence $(x_1,x_2,...,x_n)$ into an output sequence $(y_1,y_2,...,y_m)$. Because this formulation is so general, it doesn't say what $x_1$ and $y_1$ should represent -- it could be a word, a sub-word, a character, a pixel, or a token representing any arbitrary thing. However, I'll be talking about Transformers in the context of NLP here, because that's what it was originally invented for. So if we're talking about machine translation, the input sequence could be a sequence of words in one language (e.g. Korean) and the output could be a sequence of words in the target language (e.g. English):
 
 ![](https://sarckk.github.io/media/transformer_1.svg)
@@ -49,7 +82,7 @@ It's okay if some of these steps do not make sense yet, especially on why we nee
 
 Now, let's talk about each of these components in greater detail during **training**. Then we'll talk about what happens at **inference time**.
 
-## Diving deeper: the embedding layer
+## Diving deeper: the embedding layer 
 Let's start from the very beginning. The original Transformer in the 2017 paper was trained on the task of translating English sentences to German, using the WMT 2014 English-German dataset. This dataset contains ~4.5 million pairs of English sentence and its corresponding translation in German. We'll use this example to explain what happens in a Transformer for the rest of the article.
 
 This means that during training, the input to the transformer (bottom left of Figure 1 above, below the very first decoder) is a sequence(s) of tokens in the English sentence. The paper mentions that they used [byte-pair](https://en.wikipedia.org/wiki/Byte_pair_encoding) encoding (page 7) to tokenize the sentences, but for simplicity I'll assume that the sentences are tokenized word by word:
@@ -71,7 +104,8 @@ I'll skim over this step for now, because it only really makes sense when we sta
 
 In the end, the input to the encoder is a tensor of shape `(B,T,D)`. The same thing happens for the decoder, except with German sentences in our example of English-to-German translation. 
 
-## Encoder
+----
+## Encoder 
 We've finally reached the encoder. The encoding step consists of **N** independent encoder units stacked on top of each other. These encoders are identical in architecture, but do not share weights between them and are thus separately updated during backpropagation.
 
 The encoder unit itself comprises 2 parts:
@@ -98,7 +132,7 @@ Remember, the sentence is "This jacket is too small for me". When we look at the
 
 Dot products form the basis of the attention mechanism.
 
-### A closer look at attention
+### A closer look at attention 
 Computing attention involves 3 inputs: query(s), keys(s), and value(s) where these are all vectors. More formally, we have:
 
 - Queries $q_1,...,q_T$ where $q_i \in$ $\R^{d_k}$, where $d_k$ is the dimension of the query vector, and $T$ is the number of queries
@@ -148,7 +182,7 @@ The authors in the Transformers paper also apply a scaling factor of $\frac{1}{d
 
 This ability for parallelization is a part of why the Transformer has been so successful -- previous models based on recurrence, for example, cannot be parallelized because the computation of its state at time $t$, $h_t$ necessarily depends on the computation of its previous state at time $t-1$, $h_{t-1}$.
 
-### Back to Positional Encodings
+### Back to Positional Encodings 
 Now we can finally talk about why we need positional encodings. We've seen that (self-)attention basically comes down to taking a bunch of dot products and outputting a new vector with this information. The problem is, by simply taking dot products, we lose information about the relative order of these words in a sentence. And we know that the position of a word in a sentence matters. 
 
 To encode information about the position of each token in the sequence, we add **positional encodings** to the input embeddings. In practice, there are many ways to generate this -- including having the network learn this during training -- but the authors use the following formula:
@@ -198,7 +232,7 @@ Note that the  `self.register_buffer('pe', pe)` line is important because while 
 </details>
 <br/>
 
-### Multi-Head Attention
+### Multi-Head Attention 
 In the paper, the authors use **Multi-Head Attention (MHA)**. In MHA we have multiple "heads" that each performs the attention computation that we *just* talked about. However, each head $h_i$ has its own linear projection matrices $K_i$, $Q_i$, and $V_i$, and these matrices project the key, query and value vectors to a **lower** dimensional space than we had with single matrices.
 
 For example, if the dimension of matrix $K$ in **Single-Head Attention** was $512 \times 512$, then the dimension of $K_1$ and $K_2$ in a **2-Head Attention** would each be $512 \times 256$, thus projecting to a 256-dimensional space instead of 512-dimensional. 
@@ -270,7 +304,7 @@ class MultiHeadAttention(nn.Module):
 ```
 </details>
 
-### Masking in the encoder
+### Masking in the encoder 
 The last important detail to mention at this point for the encoder is **masking**. Recall that in our input sequence, we used a special token for padding, `<PAD>`. Because these are just dummy tokens added to ensure all sequences in a batch are of the same length, during attention computation we'd like to exclude the embedding vectors corresponding to these padding tokens from the weighted sum, by setting their weights to 0. 
 
 ![TODO: Illustration here]()
@@ -299,7 +333,7 @@ attn_weights += mask
 
 Since `mask` has shape `(B,1,1,S)`, we [broadcast](https://pytorch.org/docs/stable/notes/broadcasting.html) across the 2nd and 3rd dimensions. The 2nd dimension broadcasts across the number of attention heads, while the 3rd dimension broadcasts the number of query vectors. While for self-attention, the number of query vectors equals the number of key and value vectors since they all get generated from the same source vectors, this isn't true in [**cross-attention**](), which we'll get to later when we look at the decoder. This is why we don't generate a padding mask of shape `(B,1,S,S)`, although we technically can for self-attention. 
 
-### Feed-Forward Network
+### Feed-Forward Network 
 Recall that self-attention is only the first part of a Transformer encoder. The issue with only having self-attention is that it is a linear transformation with respect to each element/position in a sequence; as we have seen, self-attention is basically a weighted sum (linear) where the weights are computed from dot products (also linear). And we know that nonlinearities are important in deep learning because it allows neural networks to approximate a wide range of functions (or all continous functions, as the [Universal approximation theorem](https://en.wikipedia.org/wiki/Universal_approximation_theorem) tells us).
 
 So the creators of the Transformer introduce a fully connected feed-forward network after attention. This feed-forward network is applied **position-wise**, meaning it is applied to each element in the sequence independently. Therefore, in addition to introducing nonlinearities, these feed-forward networks can also be thought of as somehow "processing" the individual outputs in the sequence post-attention -- it does this by projecting the input into a higher dimension, applying nonlinearity, and projecting it back into the original dimension.[^1] In the paper, they use a 2-layer network with 1 hidden layer and ReLU activation as the nonlinearity. In PyTorch, this simply implemented as:
@@ -334,7 +368,8 @@ Let's end this section by revisiting the encoder diagram from the paper:
 
 Everything shown in the diagram should be familiar to us by now. In particular, note how there are 3 arrows going into the Multi-Head Attention module: these represent key, query and values.
 
-## Decoder
+----
+## Decoder 
 Phew! There was quite a lot to cover for encoders. Fortunately, I've already covered most of the important parts of the Transformer -- the decoding part more or less mirrors what we had in the encoding phase, with a few key differences. 
 
 The input to the first decoder in the stack is a sequence of numerical representations of output tokens. The term "output" here might be a bit confusing. In the context of neural machine translation, the output here refers to tokens in the target language. Assuming that the target language is German and that we use a word-level tokenizer (i.e. each token is just a German word), then we can say that we pass in the sequence of indices of each German word in the sentence. The rest is the same as encoders: we generate an embedding vector and add positional encoding.
@@ -343,7 +378,7 @@ Also similar to the encoding phase, we have $N$ decoder modules, where $N=6$ for
 - In a decoder, there is an additional sublayer between self-attention and feed-forward network: **cross-attention**.
 - An additional mask is used in the decoder to prevent "looking into the future" in self-attention.
 
-### Difference #1: Cross-Attention
+### Difference #1: Cross-Attention 
 Remember that in self-attention, we have query, key and value vectors used in attention computation coming from the same embedding vector. In cross-attention, we derive the query vector from one embedding vector and key and value vectors from a different vector. More specifically, in the decoder, the query vector comee from the output of the previous layer (i.e. for the very first decoder, this is the embedding layer; for subsequent decoders, it's the previous decoder), while the key and value vectors are generated from the output of the last encoder. Referring back to [Figure 1]() from the paper, this is illustrated with two arrows coming from the encoder to the cross-attention sublayer of the decoder.
 
 Again, in the context of the machine translation task that the original Transformer was trained on, this step makes intuitive sense because for each word (or more generally, a token) in the target language sentence, we are essentially querying for the most relevant word(s) in the source language sentence and taking a weighted sum of their vector representations so that in the end we can predict the next word (more on training soon):
@@ -353,7 +388,7 @@ Again, in the context of the machine translation task that the original Transfor
 <caption>Illustration of the concept here</caption>
 </p>
 
-### Difference #2: Masking in self-attention
+### Difference #2: Masking in self-attention 
 The other difference between decoders and encoders is in the masking. Within the decoder, the masks used in self-attention and cross-attention are different, too.
 
 **Masking in self-attention**
@@ -385,8 +420,6 @@ When I was researching on how masking works in the decoder, the examples I could
 
 I haven't found a resource online that explicitly confirms this, so I could very well wrong -- if so, please let me know by submitting an issue [here](https://github.com/sarckk/sarckk.github.io).
 
-<br/>
-
 **Masking in cross-attention** 
 
 In cross-attention, because the key and value vectors that we're using to calculate dot products and calculate the weighted sum respectively come from the final output of the encoder, we don't need to mask future tokens, because all of this information should be available to us in the decoding stage. However, we still need to mask out the positions which correspond to padding tokens in the encoder's input like we did for self-attention in the encoder.
@@ -395,6 +428,7 @@ Recall the [shape of the padding mask](), which was `(B,1,1,S)`, where `S` is th
 
 That's it!
 
+---
 ## Linear + Softmax Layer
 As a final step, the output from the last decoder is passed to a linear layer that projects the embedding vectors to a dimension given by the vocabulary size of the target language, followed by a softmax layer to convert those values into probabilities that sum to 1. For example, if we translating from English to German, and the dataset we're training on has a German vocabulary size of 37000, then the linear layer will take `emb_dimension` input features (e.g. 512) and have 37000 output features. After softmax, the value at $i^{th}$ dimension of the vector at $k^{th}$ position in the sequence will be probability for the $i^{th}$ word/token in the vocabulary in the $(k+1)^{th}$ position.
 
@@ -437,13 +471,13 @@ Section **5.4** of the paper mentions two regularization techniques used during 
 Model hyperparameters for the base Transformer model can be found on Table 3 of the paper. This model has around 65M trainable parameters -- comparing this number to the number of trainable params in your own implementation can be a good sanity check during development.
 
 ### Optimizer
-Nothing special here, just an Adam optimizer with $\beta_1=0.9$, $\beta_2=0.98$ and $\epsilon=10^-9$.
+Nothing special here, just an Adam optimizer with $\beta_1=0.9$, $\beta_2=0.98$ and $\epsilon=10^{-9}$.
 
 ### Learning-rate scheduling
 The paper uses a variable learning rate during training, given by the following formula:
 
 \begin{equation}
-lrate = d_{model}^{-0.5} \cdot min(step\_num^{-0.5}, step\_num \cdot warmup\_steps^{-1.5})
+lrate = {d_{model}}^{-0.5} \cdot min(step\_num^{-0.5}, step\_num \cdot warmup\_steps^{-1.5})
 \end{equation}
 
 where $warmup\_steps=4000$.
@@ -451,16 +485,16 @@ where $warmup\_steps=4000$.
 The best way to understand how this works is to look at how the learning rate changes with step count:
 
 <p align="center" style="display:flex; flex-direction: column; align-items: center;">
-<img src="https://raw.githubusercontent.com/gordicaleksa/pytorch-original-transformer/main/data/readme_pics/custom_learning_rate_schedule.PNG" width=400/>
-<caption>
-Source: <a href="https://github.com/gordicaleksa/pytorch-original-transformer">https://github.com/gordicaleksa/pytorch-original-transformer</a>
-</caption>
+<img src="https://raw.githubusercontent.com/gordicaleksa/pytorch-original-transformer/main/data/readme_pics/custom_learning_rate_schedule.PNG" width=500/>
+<span style="display: flex; flex-direction: row;">
+<span>Source: </span><a href="https://github.com/gordicaleksa/pytorch-original-transformer">https://github.com/gordicaleksa/pytorch-original-transformer</a>
+</span>
 </p>
 
 If you got the model and training steps right, you should be seeing a sweet training loss curve like this:
 
 <p align="center">
-<img src="https://sarckk.github.io/media/train_loss_transformer.svg"/>
+<img src="https://sarckk.github.io/media/train_loss_transformer.svg" width=500/>
 </p>
 
 # Inference
@@ -478,6 +512,8 @@ Note that we still have to use the padding and the look-ahead masks just like we
 
 # Conclusion
 As I mentioned in the beginning of this article, I wrote this post mostly for myself, as a sort of recap of what I've learned. That said, even with so many tutorials online on this now-6-years-old technology, I still think what I have here might be useful to anyone who might across it, especially if they are somewhat new to deep learning; most tutorials I've seen on Transformers tend to gloss over some details especially around masking as well as how the encoder/decoder input vectors, and the key,query and value vectors in attention are generated. What I've attempted to do in this post is to document everything that I've had to learn and understand to train a simple Transformer model. I've already learned a lot writing this article, but I hope that it also helps someone out there.
+
+--- 
 
 # Acknowledgements
 Here are some resources that I've used to learn about Transformers
