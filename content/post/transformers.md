@@ -8,13 +8,13 @@ tags:
   - LLM
 ---
 
+
 Today's Large Language Models (LLM) are based on Transformers, a deep learning model architecture for sequence-to-sequence transformations based on the attention mechanism. While it was originally proposed and used in Natural Language Processing (NLP) tasks like language translation, it turns out that a lot of things that we care about can be modelled in terms of sequences, making transformers a useful model in a wide variety of applications beyond NLP, such as [image processing](https://arxiv.org/abs/2103.14030) and [reinforcement learning](https://arxiv.org/abs/2106.01345). Given the overwhelming success of transformers in deep learning and the outsized impact that transformer-based generative AI (e.g. GPT) has had -- and will likely continue to have -- on our society, I thought I should finally take time to read and understand the paper ["Attention Is All You Need" (Vaswani et al., 2017)](https://arxiv.org/abs/1706.03762) that first proposed Transformers. That paper is now almost 6 years old(!) but better late than never, right?
 
 There are already [many](https://jalammar.github.io/illustrated-transformer/) [tutorials](https://www.youtube.com/watch?v=n9sLZPLOxG8) [covering](https://www.youtube.com/watch?v=n9sLZPLOxG8) [transformers](https://www.youtube.com/watch?v=ptuGllU5SQQ) online, so this article is mostly for my own learning -- this is already [well documented](https://ideas.time.com/2011/11/30/the-protege-effect/), but I find that writing in a pedagogical style helps immensely in solidifying in my learnings and is almost always worth the effort. If anyone else stumbles across this post and finds it helpful, that's an added bonus!
 
 This post will cover the technical details behind the Transformer model. The core concept behind transformers -- self- and cross- attention -- really isn't too hard too grasp, but I've found that actually getting your hands dirty and implementing the model in Pytorch elevates your understanding of the material. Personally, I ran into many issues while trying to write and train the model that I wouldn't have known had I stopped at reading the paper or other tutorials online.
 
-<div id="toc"></div>
 
 # Table of Contents <!-- omit from toc --> 
 - [All about transformations](#all-about-transformations)

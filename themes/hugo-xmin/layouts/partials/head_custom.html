@@ -14,9 +14,13 @@
 <script src="https://sarckk.github.io/scripts/jquery.tocify.min.js"></script>
 
 <script>
-    //Executes your code when the DOM is ready.  Acts the same as $(document).ready().
-    $(function () {
-        //Calls the tocify method on your HTML div.
-        $("#toc").tocify();
-    });
+    if (document.URL.includes("grokking-transformers")) {
+        //Executes your code when the DOM is ready.  Acts the same as $(document).ready().
+        $(function () {
+            //Calls the tocify method on your HTML div.
+            $("#toc").tocify({
+                selectors: "h1:not('.exclude-toc'),h2:not('.exclude-toc'),h3:not('.exclude-toc')"
+            });
+        });
+    }
 </script>
