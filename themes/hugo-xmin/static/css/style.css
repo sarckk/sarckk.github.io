@@ -1,8 +1,17 @@
-body {
+.container {
   max-width: 800px;
   margin: auto;
   padding: 1em;
   line-height: 1.5;
+}
+
+.container-wrapper {
+  width: 100%;
+  display: block;
+}
+
+.left-container {
+  position: relative;
 }
 
 /* header and footer areas */
