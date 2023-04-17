@@ -24,6 +24,11 @@
     }
 }
 
+.tocify .active {
+    background-color: #4974F1;
+    color: #fff;
+}
+
 /* The Table of Contents is composed of multiple nested unordered lists.  These styles remove the default styling of an unordered list because it is ugly. */
 .tocify ul,
 .tocify li {
