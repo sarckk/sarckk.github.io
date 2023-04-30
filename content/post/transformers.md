@@ -50,9 +50,9 @@ This post will cover the technical details behind the Transformer model. The cor
 - [Where to go from here](#where-to-go-from-here)
 
 # All about transformations
-A Transformer -- as its name suggests -- *transforms* an input sequence $(x_1,x_2,...,x_n)$ into an output sequence $(y_1,y_2,...,y_m)$. Because this formulation is so general, it doesn't say what $x_1$ and $y_1$ should represent -- it could be a word, a sub-word, a character, a pixel, or a token representing any arbitrary thing. However, I'll be talking about Transformers in the context of NLP here, because that's what it was originally invented for. So if we're talking about machine translation, the input sequence could be a sequence of words in one language (e.g. English) and the output could be a sequence of words in the target language (e.g. German):
+A Transformer -- as its name suggests -- *transforms* an input sequence $(x_1,x_2,...,x_S)$ into an output sequence $(y_1,y_2,...,y_T)$. Because this formulation is so general, it doesn't say what $x_1$ and $y_1$ should represent -- it could be a word, a sub-word, a character, a pixel, or a token representing any arbitrary thing. However, I'll be talking about Transformers in the context of NLP here, because that's what it was originally invented for. So if we're talking about machine translation, the input sequence could be a sequence of words in one language (e.g. English) and the output could be a sequence of words in the target language (e.g. German):
 
-![](https://sarckk.github.io/media/transformer1.svg)
+![Transformer transforms](https://sarckk.github.io/media/transformer1.svg)
 
 In the diagram above, each element in a sequence represents a word, but in practice, it is common for this to a smaller unit than a word (e.g. a sub-word) depending on the tokenizer you use. 
 
@@ -70,17 +70,17 @@ If you're like me, this might be a bit overwhelming to take in at first. In real
 </p>
 
 At a high level, here's the journey that our input sequence takes to be transformed into an output sequence:
-1) Go through input embedding layer which projects each element in a sequence $x_i$ into a higher dimensional vector. 
+1) Go through input embedding layer which projects each element $x_i$ in a sequence of length **S** into a higher dimensional vector. 
 2) Add "Positional Encoding" vector to each element in the sequence (which remember, is now a high-dimensional vector). We'll talk about this in more detail later.
 3) Go through the encoder (orange block in the diagram above) **N** times. These **N** encoders have the same architecture but do not share weights.At the end of this step, we get a tensor that compactly represents the input sequence. 
-4) On the decoder side, we pass in a sequence of length **M**, which goes through the same embedding layer + positional encoding as we had for the input sequence.  
+4) On the decoder side, we pass in a sequence of length **T**, which goes through the same embedding layer + positional encoding as we had for the input sequence.  
 5) The output embedding goes through a stack of **N** decoders (again no sharing of weights), each of which uses the tensor we got from **Step 3** in some way. At the end of this step, we get another tensor.
-6) We pass this tensor through a final Linear + Softmax layer to obtain **M** probabilities, where again **M** is the length of the sequence we passed into the decoder.
-7) We convert those probabilities into actual tokens (e.g. by taking the token with the highest probability), giving us an output sequence of length **M**.
+6) We pass this tensor through a final Linear + Softmax layer to obtain **T** probabilities, where again **T** is the length of the sequence we passed into the decoder.
+7) We convert those probabilities into actual tokens (e.g. by taking the token with the highest probability), giving us an output sequence of length **T**.
 
-So from an input sequence of length **N** and decoder input of length **M**, we got -- as the final product of the Transformer -- another sequence of length **M**.
+So from an input sequence of length **S** and decoder input of length **T**, we got -- as the final product of the Transformer -- another sequence of length **T**.
 
-It's okay if some of these steps do not make sense yet. For example, I was confused as to why a sequence of length **M** had to be passed into the decoder to get another sequence of the same length **M**: if we are just passing in an input sentence and expect the model to output the translated text, what are we passing to the decoder? WTF? Don't worry, this will become clear when we talk about training and inference later in this article.
+It's okay if some of these steps do not make sense yet. For example, I was confused as to why a sequence of length **T** had to be passed into the decoder to get another sequence of the same length **T**: if we are just passing in an input sentence and expect the model to output the translated text, what are we passing to the decoder? WTF? Don't worry, this will become clear when we talk about training and inference later in this article.
 
 Now, let's talk about each of these components in greater detail during **training**. Then we'll talk about what happens at **inference time**.
 
@@ -205,7 +205,7 @@ This ability for parallelization is a part of why the Transformer has been so su
 Another important consequence of relying heavily on attention is that we can visualize the attention weights, which can aid in debugging as well as interpreting and explaining the model output.
 
 <br />
-<figure align="center" style="display:flex; flex-direction: column; align-items: center;" id="lookahead-mask">
+<figure align="center" style="display:flex; flex-direction: column; align-items: center;">
 <img src="https://raw.githubusercontent.com/jessevig/bertviz/master/images/head-view.gif" width=300>
 <figcaption><strong>Above:</strong> Transformer attention can be visualized, giving us some visibility into what these models learn. Source: BertViz github repo (<a href="https://github.com/jessevig/bertviz">https://github.com/jessevig/bertviz</a>). BertViz is a tool for visualizing attention in Transformer language models
 </figcaption>
