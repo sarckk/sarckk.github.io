@@ -73,3 +73,7 @@ details {
 summary {
   cursor: pointer;
 }
+
+figcaption {
+  margin-top: 1rem;
+}
