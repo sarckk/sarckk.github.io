@@ -169,12 +169,13 @@ $$
 
 In our case, $d_k=d_v=512$. We have $W^K$, $W^Q$ and $W^Q$ matrices that linearly project each key, query and value vectors -- this allows for more flexibility in both how the model chooses to define "similarity" between words (by updating $K$ and $Q$), as well as what the final weighted sum represents (by updating $V$) in latent space. In Pytorch code, these matrices are implemented as [`nn.Linear`](https://pytorch.org/docs/stable/generated/torch.nn.Linear.html) modules with `bias=False`. 
 
+<p align="center" style="display:flex; flex-direction: column; align-items: center;">
+<img src="../media/transformer_self_attention.svg" width=450/>
+<caption style="margin-top:2px;">Illustration of how self-attention works for two tokens "jacket" and "small". For each token, we obtain the contribution by all other tokens and sum them up to obtain the final output for that token.</caption>
+</p>
+
 Now that we have $k_i$, $q_i$ and $v_i$, we just compute the corresponding output for $x_i$ using the steps outlined earlier, computing the sum of all vectors weighed by the dot products. Here, since $q_i$,$k_i$ and $v_i$ are all derived from $x_i$, we give it a special name: **self-attention**. 
 
-<p align="center" width="100%">
-<img src=""/>
-Illustration of self-attention here
-</p>
 
 ### Matrix formulation of attention
 As you can see, attention is computed using dot products between any two words within a sequence, allowing the Transformer to learn long-range dependencies in a sequence more easily. One downside of this, though, is that the computation of attention scores is quadratic in the length of the input sequence $N$. This quadratic $O(N^2)$ complexity is an issue because it means it will take a lot of compute for long sequences. 
@@ -186,6 +187,11 @@ Fortunately, we can represent the computation as a product of a few matrix multi
 \end{equation}
 
 Again, the $Q$, $K$ and $V$ matrices are computed using the corresponding weight matrices $W^Q$, $W^K$, and $W^V$: for example, if we have a matrix $X$ where each row is an embedding vector in our sequence, then we'd have $Q=XW^Q$, $K=XW^K$ and $V=XW^V$ for the self-attention sublayer in the encoder. As we'll see later when we get to cross-attention in the decoder, $Q$, $K$ and $V$ do not necessarily need to come from the same single matrix $X$.
+
+<p align="center" style="display:flex; flex-direction: column; align-items: center;">
+<img src="../media/transformer_self_attention.svg" width=450/>
+<caption style="margin-top:2px;">Self-attention performed as matrix multiplications, for the example sentence "This jacket is too small for me"</caption>
+</p>
 
 The authors in the Transformers paper also apply a scaling factor of $\frac{1}{d_k}$ to the matrix of dot products (numerator) to prevent the products from becoming too large, which can "\[push\] the softmax function into regions where it has extremely small gradients" ([Viswani et al, 2017, pg 4](https://arxiv.org/pdf/1706.03762.pdf)):
 
@@ -252,7 +258,7 @@ In the paper, the authors use **Multi-Head Attention (MHA)**. In MHA we have mul
 
 For example, if the dimension of matrix $K$ in **Single-Head Attention** was $512 \times 512$, then the dimension of $K_1$ and $K_2$ in a **2-Head Attention** would each be $512 \times 256$, thus projecting to a 256-dimensional space instead of 512-dimensional. 
 
-After all the heads compute its own value of `Attention(X,Q_i,K_i,V_i)` in parallel, we concatenate the outputs to obtain an output of the same shape as we had in the case of single-head attention. This is followed by a final linear projection to $d_{emb}$-dimensional space where $d_{emb}$ is the embedding dimension. For our example input of shape `(9,512)`, MHA produces an output of the same shape.
+After all the heads compute its own value of $\text{Attention}(X,Q_i,K_i,V_i)$ in parallel, we concatenate the outputs to obtain an output of the same shape as we had in the case of single-head attention. This is followed by a final linear projection to $d_{emb}$-dimensional space where $d_{emb}$ is the embedding dimension. For our example input of shape `(9,512)`, MHA produces an output of the same shape.
 
 The intuition behind why having multiple heads improves performance is that by having independently trainable linear projections per head, the model is able to simultaneously attend to different aspects of the language (for example, for a model trained on LaTeX documents, it might have one head that learns to attend to a presence of a `\end` command if a `\begin` command appears in the sequence, and another head that relates words in terms of their semantic relevance in text).
 
@@ -378,8 +384,9 @@ Here are the remaining details for the encoder:
 
 ---
 Let's end this section by revisiting the encoder diagram from the paper:
-<p align="center" width="100%">
-<img src="https://sarckk.github.io/media/transformer_encoder_paper.png" width=250/>
+<p align="center" style="display:flex; flex-direction: column; align-items: center;">
+<img src="../media/transformer_encoder_paper.png" width=250/>
+<caption style="margin-top:2px;">Transformer encoder</caption>
 </p>
 
 Everything shown in the diagram should be familiar to us by now. In particular, note how there are 3 arrows going into the Multi-Head Attention module: these represent key, query and values.
@@ -387,6 +394,11 @@ Everything shown in the diagram should be familiar to us by now. In particular, 
 ----
 ## Decoder 
 Phew! There was quite a lot to cover for encoders. Fortunately, I've already covered most of the important parts of the Transformer -- the decoding part more or less mirrors what we had in the encoding phase, with a few key differences. 
+
+<p align="center" style="display:flex; flex-direction: column; align-items: center;">
+<img src="../media/transformer_decoder_paper.png" width=250/>
+<caption style="margin-top:2px;">Transformer decoder</caption>
+</p>
 
 The input to the first decoder in the stack is a sequence of numerical representations of output tokens. The term "output" here might be a bit confusing. In the context of neural machine translation, the output here refers to tokens in the target language. Assuming that the target language is German and that we use a word-level tokenizer (i.e. each token is just a German word), then we can say that we pass in the sequence of indices of each German word in the sentence. The rest is the same as encoders: we generate an embedding vector and add positional encoding.
 
@@ -473,7 +485,7 @@ A mistake that cost me a lot of time debugging was how `nn.CrossEntropyLoss` wor
 
 When calculating the loss, it's important to **ignore the loss contributed by the positions that correspond to the padding tokens**. This is because the padding masks themselves are not sufficient to completely get rid of the influence of padding tokens on our loss. For example, consider the following attention matrix and padding mask:
 
-![]()
+![Illustration of concept here]()
 
 The padding mask serves to prevent the embeddings of padding tokens from being included in the weighted sum in attention, but we still compute the weighted sum for the padding positions (in the above figure, that would be the bottom 2 rows/positions). If this was the final output of the last decoder, after passing through the linear layer and thereafter taking softmax, we would have the next-token probabilities at each position, even where we had paddings! So we'd like to exclude these positions from our loss. In `nn.CrossEntropyLoss`, you can do this by passing the index of `<pad>` to the `ignore_index` argument.
 
