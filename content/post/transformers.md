@@ -20,9 +20,10 @@ This post will cover the technical details behind the Transformer model. The cor
 - [All about transformations](#all-about-transformations)
 - [Diving into Transformers: the architecture](#diving-into-transformers-the-architecture)
   - [Diving deeper: the embedding layer](#diving-deeper-the-embedding-layer)
-    - [Step 1: String -\> Number](#step-1-string---number)
-    - [Step 2: Number -\> Embedding Vector](#step-2-number---embedding-vector)
-    - [Step 3: Adding Positional Encoding](#step-3-adding-positional-encoding)
+    - [Step 1: Tokenization](#step-1-tokenization)
+    - [Step 2: Converting tokens to vocabulary indices](#step-2-converting-tokens-to-vocabulary-indices)
+    - [Step 3: Embedding](#step-3-embedding)
+    - [Step 4: Adding Positional Encoding](#step-4-adding-positional-encoding)
   - [Encoder](#encoder)
     - [Attention is all you need](#attention-is-all-you-need)
     - [A closer look at attention](#a-closer-look-at-attention)
@@ -48,11 +49,11 @@ This post will cover the technical details behind the Transformer model. The cor
 - [Where to go from here](#where-to-go-from-here)
 
 # All about transformations
-A Transformer -- as its name suggests -- *transforms* an input sequence $(x_1,x_2,...,x_n)$ into an output sequence $(y_1,y_2,...,y_m)$. Because this formulation is so general, it doesn't say what $x_1$ and $y_1$ should represent -- it could be a word, a sub-word, a character, a pixel, or a token representing any arbitrary thing. However, I'll be talking about Transformers in the context of NLP here, because that's what it was originally invented for. So if we're talking about machine translation, the input sequence could be a sequence of words in one language (e.g. Korean) and the output could be a sequence of words in the target language (e.g. English):
+A Transformer -- as its name suggests -- *transforms* an input sequence $(x_1,x_2,...,x_n)$ into an output sequence $(y_1,y_2,...,y_m)$. Because this formulation is so general, it doesn't say what $x_1$ and $y_1$ should represent -- it could be a word, a sub-word, a character, a pixel, or a token representing any arbitrary thing. However, I'll be talking about Transformers in the context of NLP here, because that's what it was originally invented for. So if we're talking about machine translation, the input sequence could be a sequence of words in one language (e.g. English) and the output could be a sequence of words in the target language (e.g. German):
 
-![](https://sarckk.github.io/media/transformer_1.svg)
+![](https://sarckk.github.io/media/transformer1.svg)
 
-In the diagram above, each element in a sequence represents a word for simplicity, but in practice, it is common for this to a smaller unit than a word, like a subword for example. This depends on the tokenizer you use. 
+In the diagram above, each element in a sequence represents a word, but in practice, it is common for this to a smaller unit than a word (e.g. a sub-word) depending on the tokenizer you use. 
 
 # Diving into Transformers: the architecture
 Now let's talk about what a Transformer actually looks like. From the original paper:
@@ -78,31 +79,42 @@ At a high level, here's the journey that our input sequence takes to be transfor
 
 So from an input sequence of length **N** and decoder input of length **M**, we got -- as the final product of the Transformer -- another sequence of length **M**.
 
-It's okay if some of these steps do not make sense yet, especially on why we need a sequence of length **M** to pass into the decoder to get another sequence of the same length as the output. I was initially confused by this as well: if we are just passing in an input sentence like "" and expect the model to output the translated text, what are we passing into the decoder? WTF? Don't worry, this will become clear when we talk about Transformers at training and inference time, later in this article.
+It's okay if some of these steps do not make sense yet. For example, I was confused as to why a sequence of length **M** had to be passed into the decoder to get another sequence of the same length **M**: if we are just passing in an input sentence and expect the model to output the translated text, what are we passing to the decoder? WTF? Don't worry, this will become clear when we talk about training and inference later in this article.
 
 Now, let's talk about each of these components in greater detail during **training**. Then we'll talk about what happens at **inference time**.
 
 ## Diving deeper: the embedding layer 
 Let's start from the very beginning. The original Transformer in the 2017 paper was trained on the task of translating English sentences to German, using the WMT 2014 English-German dataset. This dataset contains ~4.5 million pairs of English sentence and its corresponding translation in German. We'll use this example to explain what happens in a Transformer for the rest of the article.
 
-This means that during training, the input to the transformer (bottom left of Figure 1 above, below the very first decoder) is a sequence(s) of tokens in the English sentence. The paper mentions that they used [byte-pair](https://en.wikipedia.org/wiki/Byte_pair_encoding) encoding (page 7) to tokenize the sentences, but for simplicity I'll assume that the sentences are tokenized word by word:
+### Step 1: Tokenization
+The first step is to tokenize each sentence into a sequence of tokens. During training, the input to the Transformer encoder is thus sequence(s) of tokens generated from the English sentences. The paper mentions that they used [byte-pair](https://en.wikipedia.org/wiki/Byte_pair_encoding) encoding (see page 7) for tokenization, but for simplicity I'll assume that the sentences are tokenized word by word.
 
-![](https://sarckk.github.io/media/seq_len_input.svg)
+<p align="center" width="100%">
+<img src="https://sarckk.github.io/media/transformer_embed_stage1.svg"/>
+</p>
 
-Above is an illustration of what this would look like for a mini-batch of 3 English sentences. Note that we have 3 special tokens: `<BOS>` denoting the beginning of sentence, `<EOS>` marking the end of a sentence, and `<PAD>` representing an "empty" token to make all the sequences in the tensor of the same length (i.e. the maximum sequence length across all sentences in the mini-batch). 
+Above is an illustration of what this would look like for an example mini-batch of 3 English sentences. Note that we have 3 special tokens: `<bos>` denoting the beginning of sentence, `<eos>` marking the end of a sentence, and `<pad>` representing an "empty" token to make all the sequences in the tensor of the same length (i.e. the maximum sequence length across all sentences in the mini-batch). 
 
-### Step 1: String -> Number
-Before we can pass this into the encoder, we need to convert these sequences of strings into a numerical representation instead so we can do some computation and make GPUs go *brrr*. To do this, we create -- from the dataset -- a mapping from all possible tokens (in this case, words) to its index in a vocabulary. So, the word "The" might have an index of 37, which uniquely identifies that token. We also leave out some indices for the special tokens that we introduced (`<BOS>`, `<EOS>` and `<PAD>`): for example, their indices might be 0, 1 and 2 respectively.
+### Step 2: Converting tokens to vocabulary indices
+Before we can pass this into the encoder, we need to convert these sequences of strings into a numerical representation instead so we can do some computation and make GPUs go *brrr*. To do this, we create -- from the dataset -- a mapping from all possible tokens (in this case, words) to its index in a vocabulary. So, the word "The" might have an index of **11**, which uniquely identifies that token. We also leave out some indices for the special tokens that we introduced (`<bos>`, `<eos>` and `<pad>`): for example, their indices might be 0, 1 and 2 respectively.
 
-### Step 2: Number -> Embedding Vector
-Once we have the input tensor, we turn each word (which by this point is a number representing its index in our vocabulary) into a high-dimensional vector that we call an **embedding vector**. This can be implemented using PyTorch's `nn.Embedding()` module. In the original paper, the embedding dimension is **512**, but this is a hyperparameter that we can tune for our model through experiments. Note that in the paper, they also multiply the embedding weights by `sqrt` of the embedding dimension (see page 5).
+<p align="center" width="100%">
+<img src="https://sarckk.github.io/media/transformer_embed_stage2.svg"/>
+</p>
+
+### Step 3: Embedding
+Once we have the input tensor, we turn each word (which by this point is a number representing its index in our vocabulary) into a high-dimensional vector that we call an **embedding vector**. This can be implemented using PyTorch's `nn.Embedding()` module. In the original paper, the embedding dimension is **512**, but this is a hyperparameter that we can tune for our model through experiments. Note that in the paper, they also multiply the embedding weights by `sqrt` of the embedding dimension (see page 5). 
 
 After this step, we have a tensor of shape (batch size, (max) input sequence length, embedding dimension). For the rest of the article, I'll use the short form `B` for batch size, `T` for the maximum input sequence length, and `D` for the embedding dimension. In our example, `B=3`, `T=9` and `D=512`.
 
-### Step 3: Adding Positional Encoding
+<p align="center" width="100%">
+<img src="https://sarckk.github.io/media/transformer_embed_stage3.svg"/>
+</p>
+
+### Step 4: Adding Positional Encoding
 I'll skim over this step for now, because it only really makes sense when we start looking at how attention is computed. Without too much detail though, here we basically add a tensor with the same shape `(B,T,D)` to our tensor from **Step 2**. This tensor that we add encodes information about the relative order of each word in a sentence, since this is information that we'd like the Transformer to consider in the computation of the final output probabilities. Again, I'll come back to this later in the article.
 
-In the end, the input to the encoder is a tensor of shape `(B,T,D)`. The same thing happens for the decoder, except with German sentences in our example of English-to-German translation. 
+In the end, the input to the encoder is a tensor of shape `(B,T,D)`. The same thing happens for the decoder, using the target language sentences instead. 
 
 ----
 ## Encoder 
@@ -112,10 +124,7 @@ The encoder unit itself comprises 2 parts:
 1) A Self-Attention module, followed by
 2) A Feed-Forward network. 
 
-We'll start with this high level picture of the encoder and gradually fill in more details:
-<p align="center" width="100%">
-<img src="https://sarckk.github.io/media/encoder_here.png" width=300/>
-</p>
+We'll start with this high level picture of the encoder and gradually fill in more details.
 
 ### Attention is all you need
 The **core idea** behind the Transformer is to replace recurrence and convolutions that made up previous sequence-to-sequence models with one entirely based on the attention mechanism. In simple terms, the attention mechanism is basically just taking a bunch of dot products between sequences. And **self-attention** is just particular case of attention where the sequences that we're concerned with is actually all the same -- just one sequence.
@@ -124,7 +133,9 @@ Remember that at this point, our example input to the encoder is a tensor of sha
 
 Let's look at just one sentence: "This jacket is too small for me". After the embedding layer, we have a tensor of shape `(9,512)`. To encode this tensor, we essentially pass all 9 of the 512-dimensional embedding vector to the self-attention module **at the same time**:
 
-![TODO: insert illustration here]()
+<p align="center" width="100%">
+<img src="https://sarckk.github.io/media/transformer_encoder_simple.svg" width=400/>
+</p>
 
 The goal of the self-attention module is to figure out how the words in the sentence (or more generally, tokens in a sequence) relate to each other. 
 
@@ -135,9 +146,9 @@ Dot products form the basis of the attention mechanism.
 ### A closer look at attention 
 Computing attention involves 3 inputs: query(s), keys(s), and value(s) where these are all vectors. More formally, we have:
 
-- Queries $q_1,...,q_T$ where $q_i \in$ $\R^{d_k}$, where $d_k$ is the dimension of the query vector, and $T$ is the number of queries
-- Keys $k_1,...k_K$ where $k_i \in$ $\R^{d_k}$, and $K$ is the number of key-value pairs
-- Value $v_1,...,v_K$ where $v_i \in$ $\R^{d_v}$, where $d_v$ is the dimension of the value vector, which is not necessarily equal to $Q$, although in our case of English-German translation, it is.
+- Queries $q_1,...,q_T$ where $q_i \in$ $\mathbb{R}^{d_k}$, where $d_k$ is the dimension of the query vector, and $T$ is the number of queries
+- Keys $k_1,...k_K$ where $k_i \in$ $\mathbb{R}^{d_k}$, and $K$ is the number of key-value pairs
+- Value $v_1,...,v_K$ where $v_i \in$ $\mathbb{R}^{d_v}$, where $d_v$ is the dimension of the value vector, which is not necessarily equal to $Q$, although in our case of English-German translation, it is.
 
 Note that $T$, the number of queries doesn't necessarily have to equal $K$, the number of key-value pairs, but the number of keys must be the same as the number of values (for them to form a key-value pair). Furthermore, the query and key vectors must have the same dimension, $d_k$ so we can do a dot product.
 
@@ -146,12 +157,12 @@ Given this formulation, the attention function on $q_i$ does the following:
 - Normalize each dot product $\alpha_{ij}$ by performing [softmax](https://developers.google.com/machine-learning/crash-course/multi-class-neural-networks/softmax) across all $j$, where $j=0,...,K$ , where $K$ is the number of key-value pairs. This gives us weights $w_{ij}$ for all $j$.
 - Output weighted sum of all $v_j$ where weight of $v_j$ is $w_{ij}$.
 
-**Back to our example sentence**, we have $x_1,...,x_9$ where $x_i$ is a 512-dimensional embedding vector representing each word in the sentence `"This jacket is too small for me"` plus the `<BOS>` and `<EOS>` tokens. We obtain our query, key and value vectors from $x_i$ by multiplying it each time with a different matrix:
+**Back to our example sentence**, we have $x_1,...,x_9$ where $x_i$ is a 512-dimensional embedding vector representing each word in the sentence `"This jacket is too small for me"` plus the `<bos>` and `<eos>` tokens. We obtain our query, key and value vectors from $x_i$ by multiplying it each time with a different matrix:
 
 $$\begin{aligned}
-k_i = W^Kx_i, \text{where } W^K \in \R^{d_k \times d_k} \\
-q_i = W^Qx_i, \text{where } W^Q \in \R^{d_k \times d_k} \\
-v_i = W^Vx_i, \text{where } W^V \in \R^{d_v \times d_v} \\
+k_i &= W^Kx_i, \text{where } W^K \in \mathbb{R}^{d_k \times d_k} \\
+q_i &= W^Qx_i, \text{where } W^Q \in \mathbb{R}^{d_k \times d_k} \\
+v_i &= W^Vx_i, \text{where } W^V \in \mathbb{R}^{d_v \times d_v} \\
 \end{aligned}$$
 
 In our case, $d_k=d_v=512$. We have $W^K$, $W^Q$ and $W^Q$ matrices that linearly project each key, query and value vectors -- this allows for more flexibility in both how the model chooses to define "similarity" between words (by updating $K$ and $Q$), as well as what the final weighted sum represents (by updating $V$) in latent space. In Pytorch code, these matrices are implemented as [`nn.Linear`](https://pytorch.org/docs/stable/generated/torch.nn.Linear.html) modules with `bias=False`. 
@@ -188,8 +199,8 @@ Now we can finally talk about why we need positional encodings. We've seen that 
 To encode information about the position of each token in the sequence, we add **positional encodings** to the input embeddings. In practice, there are many ways to generate this -- including having the network learn this during training -- but the authors use the following formula:
 
 $$\begin{aligned}
-PE_{(pos,2i)} = \sin(pos/10000^{2i/d_{emb}}) \\
-PE_{(pos,2i+1)} = \cos(pos/10000^{2i/d_{emb}})
+PE_{(pos,2i)} &= \sin(pos/10000^{2i/d_{emb}}) \\
+PE_{(pos,2i+1)} &= \cos(pos/10000^{2i/d_{emb}})
 \end{aligned}$$
 
 where $i$ is the index along the embedding dimension and $pos$ is the position of the token in the sequence. Both are 0-indexed. By having sine and cosine functions of varying periods, we are able to inject information about position in continuous form. 
@@ -305,7 +316,7 @@ class MultiHeadAttention(nn.Module):
 </details>
 
 ### Masking in the encoder 
-The last important detail to mention at this point for the encoder is **masking**. Recall that in our input sequence, we used a special token for padding, `<PAD>`. Because these are just dummy tokens added to ensure all sequences in a batch are of the same length, during attention computation we'd like to exclude the embedding vectors corresponding to these padding tokens from the weighted sum, by setting their weights to 0. 
+The last important detail to mention at this point for the encoder is **masking**. Recall that in our input sequence, we used a special token for padding, `<pad>`. Because these are just dummy tokens added to ensure all sequences in a batch are of the same length, during attention computation we'd like to exclude the embedding vectors corresponding to these padding tokens from the weighted sum, by setting their weights to 0. 
 
 ![TODO: Illustration here]()
 
@@ -363,7 +374,7 @@ Here are the remaining details for the encoder:
 ---
 Let's end this section by revisiting the encoder diagram from the paper:
 <p align="center" width="100%">
-<img src="https://sarckk.github.io/media/encoder_here.png"/>
+<img src="https://sarckk.github.io/media/transformer_encoder_paper.png" width=250/>
 </p>
 
 Everything shown in the diagram should be familiar to us by now. In particular, note how there are 3 arrows going into the Multi-Head Attention module: these represent key, query and values.
@@ -415,7 +426,7 @@ The function takes in the length of the target sequence and returns a mask with 
 When I was researching on how masking works in the decoder, the examples I could find also added a mask to exclude the padding tokens, as we did in the encoder. However, I don't think this is actually needed for self-attention in the decoder. Here's a brain dump of my reasoning:
 
 > For any given position $i$, There are two possibilities: 
-> 1. It *isn't* a padding token. Due to our look-ahead mask, we don't consider any tokens that comes afterwards in the weighted sum. Any tokens before it are necessarily not padding tokens because position $i$ isn't a padding token and we can't have a padding token that comes before a non-padding token (except the final `<EOS>` token, but this isn't included in the input to the decoder during training because the decoder inputs are shifted right -- more on this in the upcoming section on [Training]()).
+> 1. It *isn't* a padding token. Due to our look-ahead mask, we don't consider any tokens that comes afterwards in the weighted sum. Any tokens before it are necessarily not padding tokens because position $i$ isn't a padding token and we can't have a padding token that comes before a non-padding token (except the final `<eos>` token, but this isn't included in the input to the decoder during training because the decoder inputs are shifted right -- more on this in the upcoming section on [Training]()).
 > 2. It *is* a padding token. Again, we don't consider any tokens that comes afterwards. The positions before it might have padding tokens. So the output of attention at position $i$ would wrongly have included information from some padding tokens, but this doesn't matter because in the final loss calculation we ignore all positions with padding tokens (again, more on this later).
 
 I haven't found a resource online that explicitly confirms this, so I could very well wrong -- if so, please let me know by submitting an issue [here](https://github.com/sarckk/sarckk.github.io).
@@ -424,7 +435,7 @@ I haven't found a resource online that explicitly confirms this, so I could very
 
 In cross-attention, because the key and value vectors that we're using to calculate dot products and calculate the weighted sum respectively come from the final output of the encoder, we don't need to mask future tokens, because all of this information should be available to us in the decoding stage. However, we still need to mask out the positions which correspond to padding tokens in the encoder's input like we did for self-attention in the encoder.
 
-Recall the [shape of the padding mask](), which was `(B,1,1,S)`, where `S` is the length of the source token sequence. Let's think about the shape of the dot product matrix, $QK^T$. Let `T` be the target token sequence length. Then, $QK^T$ will be a matrix $\in \R^{T \times S}$. When we consider multiple heads and batch size, then the result of our attention weights will be of shape `(B,n_heads,T,S)`. Using broadcasting, we just add the padding mask to these attention weights, and calculate the weighted sum.
+Recall the [shape of the padding mask](), which was `(B,1,1,S)`, where `S` is the length of the source token sequence. Let's think about the shape of the dot product matrix, $QK^T$. Let `T` be the target token sequence length. Then, $QK^T$ will be a matrix $\in \mathbb{R}^{T \times S}$. When we consider multiple heads and batch size, then the result of our attention weights will be of shape `(B,n_heads,T,S)`. Using broadcasting, we just add the padding mask to these attention weights, and calculate the weighted sum.
 
 That's it!
 
@@ -442,11 +453,11 @@ target_input = target[:,:-1]
 ```
 
 To give a concrete example:
-- The source sequence is `[<BOS>, I, am, feeling, great, today, <EOS>]`
-- The translated target sequence in German is `[<BOS>, Ich, fühle, mich, heute, großartig, <EOS>]`
-- The input to the encoder is the embedding of `[<BOS>, I, am, feeling, great, today, <EOS>]`
-- The input to the decoder is the embedding of `[<BOS>, I, am, feeling, great, today]` (shifted right)
-- The decoder should predict `[I, am, feeling, great, today, <EOS>]` (shifted left).
+- The source sequence is `[<bos>, I, am, feeling, great, today, <eos>]`
+- The translated target sequence in German is `[<bos>, Ich, fühle, mich, heute, großartig, <eos>]`
+- The input to the encoder is the embedding of `[<bos>, I, am, feeling, great, today, <eos>]`
+- The input to the decoder is the embedding of `[<bos>, I, am, feeling, great, today]` (shifted right)
+- The decoder should predict `[I, am, feeling, great, today, <eos>]` (shifted left).
 
 So the decoder learns to predict, at each position, the token that appears in the next position.
 
@@ -459,7 +470,7 @@ When calculating the loss, it's important to **ignore the loss contributed by th
 
 ![]()
 
-The padding mask serves to prevent the embeddings of padding tokens from being included in the weighted sum in attention, but we still compute the weighted sum for the padding positions (in the above figure, that would be the bottom 2 rows/positions). If this was the final output of the last decoder, after passing through the linear layer and thereafter taking softmax, we would have the next-token probabilities at each position, even where we had paddings! So we'd like to exclude these positions from our loss. In `nn.CrossEntropyLoss`, you can do this by passing the index of `<PAD>` to the `ignore_index` argument.
+The padding mask serves to prevent the embeddings of padding tokens from being included in the weighted sum in attention, but we still compute the weighted sum for the padding positions (in the above figure, that would be the bottom 2 rows/positions). If this was the final output of the last decoder, after passing through the linear layer and thereafter taking softmax, we would have the next-token probabilities at each position, even where we had paddings! So we'd like to exclude these positions from our loss. In `nn.CrossEntropyLoss`, you can do this by passing the index of `<pad>` to the `ignore_index` argument.
 
 ### Regularization
 Section **5.4** of the paper mentions two regularization techniques used during training:
@@ -500,13 +511,13 @@ If you got the model and training steps right, you should be seeing a sweet trai
 # Inference
 Now, let's talk about how the Transformer works at inference time for machine translation. Transformers are **auto-regressive** models, meaning that it predicts the next token from all the previous tokens. At inference time, the only data available to us is the sentence(s) in the source language. From this, how do we generate the translated text using our trained model?
 
-This is achieved by starting with the `<BOS>` token, to mark the beginning of the translated sentence. Then, follow these steps:
+This is achieved by starting with the `<bos>` token, to mark the beginning of the translated sentence. Then, follow these steps:
 
 1. First, embed the entire source sequence, pass this through the encoders and obtain the final output, which is a latent representation of the source sentence that the trained model has learned.
-2. Embed the `<BOS>` token, pass this through the decoders -- which will use the output from the encoders in cross-attention -- and after linear+softmax layers we get a probability distribution (over the vocabulary of the target language) for what the next token should be. 
-3. We can greedily choose the token with the highest probability, and append this token to `<BOS>`, getting us a longer target sequence. 
+2. Embed the `<bos>` token, pass this through the decoders -- which will use the output from the encoders in cross-attention -- and after linear+softmax layers we get a probability distribution (over the vocabulary of the target language) for what the next token should be. 
+3. We can greedily choose the token with the highest probability, and append this token to `<bos>`, getting us a longer target sequence. 
 
-All we have to do now is to simply repeat steps **2** and **3** until the **last predicted token is `<EOS>`, marking the end of sentence**. Viola! We just translated from one language to another.
+All we have to do now is to simply repeat steps **2** and **3** until the **last predicted token is `<eos>`, marking the end of sentence**. Viola! We just translated from one language to another.
 
 Note that we still have to use the padding and the look-ahead masks just like we did for training, and in step 2 we would have to use a different look-ahead mask with each iteration since the target sequence length changes. However, more advanced implementations of Transformer can allow [only the last predicted token to be passed in on each iteration](https://datascience.stackexchange.com/questions/80826/transformer-masking-during-training-or-inference), in which case the look-ahead mask doesn't have to be passed in, since there is no "future" to consider.
 
