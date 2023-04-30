@@ -159,11 +159,13 @@ Given this formulation, the attention function on $q_i$ does the following:
 
 **Back to our example sentence**, we have $x_1,...,x_9$ where $x_i$ is a 512-dimensional embedding vector representing each word in the sentence `"This jacket is too small for me"` plus the `<bos>` and `<eos>` tokens. We obtain our query, key and value vectors from $x_i$ by multiplying it each time with a different matrix:
 
-$$\begin{aligned}
-k_i &= W^Kx_i, \text{where } W^K \in \mathbb{R}^{d_k \times d_k} \\
-q_i &= W^Qx_i, \text{where } W^Q \in \mathbb{R}^{d_k \times d_k} \\
-v_i &= W^Vx_i, \text{where } W^V \in \mathbb{R}^{d_v \times d_v} \\
-\end{aligned}$$
+$$
+\begin{aligned}
+k_i &= W^Kx_i, \text{where } W^K \in \mathbb{R}^{d_k \times d_k} \\\\
+q_i &= W^Qx_i, \text{where } W^Q \in \mathbb{R}^{d_k \times d_k} \\\\
+v_i &= W^Vx_i, \text{where } W^V \in \mathbb{R}^{d_v \times d_v} \\\\
+\end{aligned}
+$$
 
 In our case, $d_k=d_v=512$. We have $W^K$, $W^Q$ and $W^Q$ matrices that linearly project each key, query and value vectors -- this allows for more flexibility in both how the model chooses to define "similarity" between words (by updating $K$ and $Q$), as well as what the final weighted sum represents (by updating $V$) in latent space. In Pytorch code, these matrices are implemented as [`nn.Linear`](https://pytorch.org/docs/stable/generated/torch.nn.Linear.html) modules with `bias=False`. 
 
@@ -198,10 +200,12 @@ Now we can finally talk about why we need positional encodings. We've seen that 
 
 To encode information about the position of each token in the sequence, we add **positional encodings** to the input embeddings. In practice, there are many ways to generate this -- including having the network learn this during training -- but the authors use the following formula:
 
-$$\begin{aligned}
-PE_{(pos,2i)} &= \sin(pos/10000^{2i/d_{emb}}) \\
+$$
+\begin{aligned}
+PE_{(pos,2i)} &= \sin(pos/10000^{2i/d_{emb}}) \\\\
 PE_{(pos,2i+1)} &= \cos(pos/10000^{2i/d_{emb}})
-\end{aligned}$$
+\end{aligned}
+$$
 
 where $i$ is the index along the embedding dimension and $pos$ is the position of the token in the sequence. Both are 0-indexed. By having sine and cosine functions of varying periods, we are able to inject information about position in continuous form. 
 
@@ -369,6 +373,7 @@ Here are the remaining details for the encoder:
 <p align="center" width="100%">
 <img src="https://sarckk.github.io/media/layernorm.png"/>
 </p>
+
 - Use of **residual connections** around both the self-attention and feed-forward network sublayers. First introduced in 2015 by the famous [ResNet paper](https://arxiv.org/abs/1512.03385), residual connections here basically means instead of the sublayer output being `f(x)`, it is `x + f(x)`, which helps with training by providing a gateway for gradients to pass through more easily during backprop.
 
 ---
@@ -488,10 +493,10 @@ Nothing special here, just an Adam optimizer with $\beta_1=0.9$, $\beta_2=0.98$ 
 The paper uses a variable learning rate during training, given by the following formula:
 
 \begin{equation}
-lrate = {d_{model}}^{-0.5} \cdot min(step\_num^{-0.5}, step\_num \cdot warmup\_steps^{-1.5})
+lrate = {d_{model}}^{-0.5} \cdot min(step\texttt{\_}num^{-0.5}, step\texttt{\_}num \cdot warmup\texttt{\_}steps^{-1.5})
 \end{equation}
 
-where $warmup\_steps=4000$.
+where $warmup\texttt{\_}steps=4000$.
 
 The best way to understand how this works is to look at how the learning rate changes with step count:
 
