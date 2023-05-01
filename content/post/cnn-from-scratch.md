@@ -174,11 +174,19 @@ Let the output of conv (variable `out` from the forward pass) be $o$. Using the 
 
 Imagine we have a `3 x 3` image $x$ and a `2 x 2` kernel filled with zeros. The result of the convolution operation is a `2 x 2` output also filled with zeros (rightside of the arrow). We assume no padding and a stride of 1:  
 
-<img src='https://i.imgur.com/zAVGF6p.png' width='700'/>
+<br/>
+<p align="center">
+<img src="https://sarckk.github.io/media/cnn_zero_kernel.svg" width=700/>
+</p>
+<br/>
 
 Now let's imagine what would happen if we *nudge* the value of the top left cell of the filter, such that it becomes a 1. How would the output change? After all, this is essentially what $\frac{\partial o}{\partial w}$ is telling us. Let's look at the updated diagram:
 
-<img src='https://i.imgur.com/oxfqrj0.png' width='700'/>
+<br/>
+<p align="center">
+<img src="https://sarckk.github.io/media/cnn_non_zero_kernel.svg" width=700/>
+</p>
+<br/>
 
 Can you see the pattern? We can see that the output changed by exactly the image pixel values that the changed filter weight is multiplied with during the convolution operation. In other words, the derivative of a single pixel of our output $o$ with respect to a filter weight is just the corresponding pixel value in the image (that this filter weight is multiplied by). 
 
