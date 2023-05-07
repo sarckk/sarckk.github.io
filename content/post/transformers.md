@@ -614,6 +614,8 @@ Here are some resources that I've used to learn about Transformers
 - [Stanford CS224N Lecture 9 - Self-Attention and Transformers](https://www.youtube.com/watch?v=ptuGllU5SQQ). Probably the best lecture on Transformers online. This is the video that made attention and Transformers *click* for me.
 - [PyTorch implementation of Transformer by Gordic Aleksa (AI Epiphany)](https://github.com/gordicaleksa/pytorch-original-transformer) and the accompanying [video tutorial](https://www.youtube.com/watch?v=n9sLZPLOxG8). I didn't refer to the implementation for the most part, but I did use it as reference to debug an issue I had with my implementation.
 
+I'd also like to thank my friend Filippo for his feedback.
+
 # Where to go from here
 As an addendum, I'll just include some links to resources that I've come across that might serve as good next steps after understanding the Transformer. These are also things I'd like to read up in the near future:
 
