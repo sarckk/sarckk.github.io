@@ -403,7 +403,7 @@ feed_foward_net = nn.Sequential(
 ) 
 ```
 
-[^4]: It looks like the exact role that these feed-forward networks play in a transformer is not fully understood; see ["Transformer feed-forward layers are key-value memories." (Geva, Mor, et al., 2020)](https://aclanthology.org/2021.emnlp-main.446.pdf) for a paper that tries to shed light into their importance.
+[^4]: It looks like the exact role that these feed-forward networks play in a transformer is not fully understood; see ["Transformer feed-forward layers are key-value memories." (Geva, Mor, et al., 2020)](https://aclanthology.org/2021.emnlp-main.446.pdf) for a paper that tries to shed light on their importance.
 
 In the paper, `hidden_dimension` is set to a value of 2048 (`embedding_dimension` is 512 as mentioned earlier).
 
