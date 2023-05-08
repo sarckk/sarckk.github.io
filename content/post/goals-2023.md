@@ -4,7 +4,7 @@ date: '2023-05-07'
 tags:
   - Reflections
 ---
-Inspired by the advice of [identifying things that are bothering you and you are willing to fix](https://www.goodreads.com/quotes/9436455-pay-attention-focus-on-your-surroundings-physical-and-psychological-notice#:~:text=You%20can%20find%20such%20somethings,the%20questions%2C%20then%20look%20elsewhere.), several posts on [LessWrong](https://www.lesswrong.com/) I read today, and my own frustrations about not getting some shit done recently, I'm compiling a list of things I'd like to improve in my life this year, organised into several different but related dimensions. I'm sharing these publicly to keep myself accountable for them.
+Inspired by the advice of [identifying things that are bothering you and you are willing to fix](https://www.goodreads.com/quotes/9436455-pay-attention-focus-on-your-surroundings-physical-and-psychological-notice#:~:text=You%20can%20find%20such%20somethings,the%20questions%2C%20then%20look%20elsewhere.), several posts on [LessWrong](https://www.lesswrong.com/) I read today, and my own frustrations about not getting some shit done recently, I'm compiling a list of things I'd like to improve in my life this year, categorized along several different but related dimensions. I'm sharing these publicly to keep myself accountable for them.
 
 p.s. if I know you in real life, feel free to share your own goals with me. I think it's incredibly helpful to have someone to be accountable to in one's self-improvement journey.
 
