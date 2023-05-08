@@ -7,7 +7,7 @@ tags:
 
 It's recently been 6 months since I started my first full-time job as a software engineer after graduating from university last year. A lot has changed in my life, and I thought I'd write about the things I've learned about myself, career, and life in the past half a year. 
 
-Some of these are amalgamations of things I've read about before but have only recently begun to appreciate. It's also things that I believe to be generally true at the time of writing this, but I suspect some of these will not apply to all situations (see learning #8) or will need to be updated with more nuance in the future. As a disclaimer, I'm like, uh, 23, so take them with a pinch of salt.
+Some of these are amalgamations of things I've read about before but have only recently begun to appreciate. It's also things that I believe to be generally true at the time of writing this, but I suspect some of these will not apply to all situations (see learning #6) or will need to be updated with more nuance in the future. As a disclaimer, I'm like, uh, 23, so take them with a pinch of salt.
 
 I nevertheless think these are generally good statements to live by. I myself try to incorporate these learnings into my life, but as with most things, it's a process!
 
