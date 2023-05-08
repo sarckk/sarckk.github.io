@@ -14,7 +14,7 @@ Today's Large Language Models (LLM) are based on Transformers, a deep learning m
 
 This paper is now almost 6 years(!) old. In a field as fast-moving as machine learning, one might be tempted view it as an artifact of the past, but Transformers are more relevant today than ever: LLMs that have garnered hype recently, such as OpenAI's ChatGPT & GPT-4 as well as Google's PaLM, are all some variants of Transformers, except trained with massive scale, both in terms of model size and training data. [^1] 
 
-[^1]: In fact, GPT stands for **G**enerative **P**re-trained **T**ransformer. ChatGPT has an extra magic ingredient that makes it work so much more seamlessly than its predecessors, called [Reinforcement Learning from Human Feedback (RLHF)](https://huggingface.co/blog/rlhf), but is ultimately a transformer model.It's amazing how far a few good ideas can take us. If you're interested, I urge you to watch [this interview](https://www.youtube.com/watch?v=XjSUJUL9ADw) with Ilya Sutskever, the Chief Scientist of OpenAI, on some of these ideas
+[^1]: In fact, GPT stands for **G**enerative **P**re-trained **T**ransformer. ChatGPT has an extra magic ingredient that makes it work so much more seamlessly than its predecessors, called [Reinforcement Learning from Human Feedback (RLHF)](https://huggingface.co/blog/rlhf), but is ultimately a transformer model. It's amazing how far a few good ideas can take us. If you're interested, I urge you to watch [this interview](https://www.youtube.com/watch?v=XjSUJUL9ADw) with Ilya Sutskever, the Chief Scientist of OpenAI, on some of these ideas
 
 Given the age of this architecture, by now there are already [several](https://jalammar.github.io/illustrated-transformer/) [tutorials](https://www.youtube.com/watch?v=n9sLZPLOxG8) [covering](https://www.youtube.com/watch?v=n9sLZPLOxG8) [transformers](https://www.youtube.com/watch?v=ptuGllU5SQQ) online, so this article is mostly for my own learning -- I find that teaching others is a really good way to understand the material deeply. If anyone else stumbles across this post and finds it helpful, that's an added bonus 😊.
 
@@ -203,7 +203,7 @@ In our case, $d_k=d_v=512$. We have $W^K$, $W^Q$ and $W^Q$ matrices that linearl
 </figure>
 <br/>
 
-Now that we have $k_i$, $q_i$ and $v_i$, we just compute the corresponding output for $x_i$ using the steps outlined earlier, computing the sum of all vectors weighed by the dot products. Here, since $q_i$,$k_i$ and $v_i$ are all derived from $x_i$, we give it a special name: **self-attention**. 
+Now that we have $k_i$, $q_i$ and $v_i$, we just compute the corresponding output for $x_i$ using the steps outlined earlier, computing the sum of all vectors weighed by the dot products. Here, since $q_i$, $k_i$ and $v_i$ are all derived from $x_i$, we give it a special name: **self-attention**. 
 
 
 ### Matrix formulation of attention
