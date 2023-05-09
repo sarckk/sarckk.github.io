@@ -18,8 +18,8 @@ Inspired by the advice of [identifying things that are bothering you and you are
         - I want to learn tennis.
             -  **Plan**: I know there is a tennis coaching programme at a park near my place, so sign up for next available season? 
     -  Just enjoy life a little more.
-      - **Plan**: Do more things that make me happy, like chilling at my favorite spot in London on a sunny Sunday afternoon 😊
-      <img style="display:block;" src="https://sarckk.github.io/media/sunday.jpg" width=300/>
+        - **Plan**: Do more things that make me happy, like chilling at my favorite spot in London on a sunny Sunday afternoon 😊
+        <img style="display:block;" src="https://sarckk.github.io/media/sunday.jpg" width=300/>
 
 - **Character**
     - I want to be **someone who actually does things**. Many times in the past I've felt motivated to do something, and either never got past the "planning" stage or never followed it up with consistent effort. The projects I've never shipped and the Yamaha Pacifica collecting dust in my living room are reminders of this.
