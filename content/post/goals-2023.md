@@ -17,8 +17,7 @@ Inspired by the advice of [identifying things that are bothering you and you are
             - **Plan**: Realistically I know I won't be putting in time to practice daily, but I think I can commit to 1 hour a week during the weekends. The last time I lost interest because I was focused on mastering picking and chords without putting it to use -- this time, I'm going to make it fun for me by learning just enough chords to play songs I like and working from there.
         - I want to learn tennis.
             -  **Plan**: I know there is a tennis coaching programme at a park near my place, so sign up for next available season? 
-    -  Just enjoy life a little more.
-        - **Plan**: Do more things that make me happy, like chilling at my favorite spot in London on a sunny Sunday afternoon 😊
+    -  Do more things that make me happy, like chilling at my favorite spot in London on a sunny Sunday afternoon 😊
         <img style="display:block;" src="https://sarckk.github.io/media/sunday.jpg" width=300/>
 
 - **Character**
